@@ -1,0 +1,12 @@
+# cache
+__pycache__/
+
+# Environments
+.*venv
+
+# data directory
+gtzan
+
+# test scripts
+test.ipynb
+test.py
