@@ -1,0 +1,11 @@
+# for analysis stuff
+numpy>=2.3.4
+pandas>=2.3.3
+
+# to load the spectrograms
+pillow>=12.0.0
+
+# logging stuff
+tqdm>=4.67.1
+
+ipykernel[security]>=7.0.1
