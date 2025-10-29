@@ -2,10 +2,14 @@
 numpy>=2.3.4
 pandas>=2.3.3
 
-# to load the spectrograms
-pillow>=12.0.0
+# convenient loading wav files into numpy
+scipy>=1.16.3
+
+# parsing stuff
+pyyaml>=6.0.3
 
 # logging stuff
+tensorboard>=2.20
 tqdm>=4.67.1
 
 ipykernel[security]>=7.0.1
