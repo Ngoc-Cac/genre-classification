@@ -6,6 +6,7 @@ __pycache__/
 
 # data directory
 gtzan
+logs
 
 # test scripts
 *test.ipynb
