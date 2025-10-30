@@ -1,0 +1,20 @@
+data_args:
+  root: ../assets/gtzan  # path to the data
+  first_n_secs: -1  # Whether to use only the first_n_secs of audio. -1 means use all
+  train_ratio: .8  # The train-test split ratio
+  feature_type: chroma  # Type of feature for spectrogram: chroma and midi
+  n_fft: 2048  # The number of samples to perform FFT in STFT
+  window_type: hann  # The type of window used in STFT
+
+training_args:
+  epochs: 5
+  batch_size: 16
+  learning_rate: 1.0e-4
+  optimizer: adam  # Choose between adam, adamw and sgd
+
+inout:
+  # the name of the log directory.
+  # A directory with this name will be created in ckpt_dir
+  logdir: logs
+  ckpt_dir: ../assets/checkpoints  # where the models should be checkpointed
+  checkpoint: ''  # previous checkpoint of the model.
