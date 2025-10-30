@@ -8,6 +8,10 @@ __pycache__/
 gtzan
 logs
 
+# model checkpoints
+*checkpoints
+*ckpt
+
 # test scripts
 *test.ipynb
 *test.py
