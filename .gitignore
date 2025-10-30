@@ -8,5 +8,5 @@ __pycache__/
 gtzan
 
 # test scripts
-test.ipynb
-test.py
+*test.ipynb
+*test.py
