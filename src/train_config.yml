@@ -1,6 +1,6 @@
 data_args:
   root: ../assets/gtzan  # path to the data
-  first_n_secs: -1  # Whether to use only the first_n_secs of audio. -1 means use all
+  first_n_secs: 20  # Whether to use only the first_n_secs of audio. -1 means use all
   train_ratio: .8  # The train-test split ratio
   feature_type: chroma  # Type of feature for spectrogram: chroma and midi
   n_fft: 2048  # The number of samples to perform FFT in STFT
