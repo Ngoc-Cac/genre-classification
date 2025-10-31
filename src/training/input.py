@@ -91,8 +91,7 @@ def validate_inout_args(inout: dict):
             lambda path: path[-4:] == '.pth',
             os.listdir(inout['ckpt_dir'])
         ))
-        ckpt = f"{inout['ckpt_dir']}/{ckpts[-1]}"
-        inout['checkpoint'] = ckpt if os.path.exists(ckpt) else ''
+        inout['checkpoint'] =  f"{inout['ckpt_dir']}/{ckpts[-1]}" if ckpts else ''
     elif (
         inout['checkpoint'] and
         not os.path.exists(inout['checkpoint'])
