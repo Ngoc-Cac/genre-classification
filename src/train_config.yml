@@ -16,4 +16,4 @@ inout:
   # A directory with this name will be created in ckpt_dir
   logdir: name_of_logdir
   ckpt_dir: your_checkpoint_dir  # where the models should be checkpointed
-  checkpoint: ''  # previous checkpoint of the model.
+  checkpoint: latest  # previous checkpoint of the model. Specify latest to load latest checkpoint
