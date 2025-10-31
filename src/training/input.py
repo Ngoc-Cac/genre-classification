@@ -86,7 +86,17 @@ def validate_inout_args(inout: dict):
     if not os.path.exists(inout['ckpt_dir']):
         os.makedirs(inout['ckpt_dir'])
 
-    if inout['checkpoint'] and not os.path.exists(inout['checkpoint']):
+    if inout['checkpoint'] == 'latest':
+        ckpts = list(filter(
+            lambda path: path[-4:] == '.pth',
+            os.listdir(inout['ckpt_dir'])
+        ))
+        ckpt = f"{inout['ckpt_dir']}/{ckpts[-1]}"
+        inout['checkpoint'] = ckpt if os.path.exists(ckpt) else ''
+    elif (
+        inout['checkpoint'] and
+        not os.path.exists(inout['checkpoint'])
+    ):
         raise FileNotFoundError(
             'checkpoint does not exist! '
             'Please check if the given path is correct'
