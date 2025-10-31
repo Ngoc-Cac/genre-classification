@@ -51,6 +51,11 @@ if configs['inout']['checkpoint']:
     optimizer.load_state_dict(ckpt['optimizer'])
 
 cpe_loss = torch.nn.CrossEntropyLoss()
+loss_fn = lambda y_hat, y: (
+    cpe_loss(y_hat, y) +
+    configs['training_args']['regularization_lambda']
+        * sum(w.pow(2).sum() for w in model.parameters())
+)
 
 # run training
 tb_logger = SummaryWriter(
@@ -67,12 +72,13 @@ pbar = tqdm.tqdm(
 for epoch in pbar:
     train_loss, train_acc, test_loss, test_acc = 0, 0, 0, 0
 
+    model.train()
     for step, (data, labels) in enumerate(train_loader):
         data = data.to(device)
         labels = labels.to(device)
 
         preds = model(data)
-        loss = cpe_loss(preds, labels)
+        loss = loss_fn(preds, labels)
 
         loss.backward()
         optimizer.step()
@@ -80,6 +86,7 @@ for epoch in pbar:
 
         train_loss += loss.item()
         train_acc += (labels == preds.argmax(dim=1)).sum().item()
+        pbar.set_postfix({'loss': loss.item()})
         tb_logger.add_scalar(
             'step/train_loss',
             loss, (epoch - 1) * len(train_loader) + step
@@ -89,12 +96,13 @@ for epoch in pbar:
         #     lr, (epoch - 1) * len(train_loader) + step
         # )
 
+    model.eval()
     with torch.no_grad():
         for data, labels in test_loader:
             data = data.to(device)
             labels = labels.to(device)
             preds = model(data)
-            test_loss += cpe_loss(preds, labels).item()
+            test_loss += loss_fn(preds, labels).item()
             test_acc += (labels == preds.argmax(dim=1)).sum().item()
 
     tb_logger.add_scalars(

@@ -10,6 +10,7 @@ training_args:
   epochs: 5
   batch_size: 16
   learning_rate: 1.0e-4
+  regularization_lambda: 0  # the lambda for L2 regularization, leave 0 for no regularization
   optimizer: adam  # Choose between adam, adamw and sgd
 
 inout:

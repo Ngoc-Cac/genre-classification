@@ -79,6 +79,14 @@ def validate_training_args(training_args: dict):
             'Please specify as a positive number.'
         )
 
+    if not isinstance(training_args['regularization_lambda'], (int, float)):
+        raise TypeError('Regularization parameter should be a positive number')
+    elif training_args['regularization_lambda'] < 0:
+        raise ValueError(
+            'Found invalid value for regularization parameter! '
+            'Please specify as a positive number'
+        )
+
     if training_args['optimizer'] not in _ALLOWED_VALUES['optimizer']:
         raise ValueError(f'optimizer should be one of: {_ALLOWED_VALUES["optimizer"]}')
 
