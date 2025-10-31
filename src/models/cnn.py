@@ -5,8 +5,11 @@ from .structs import _ACT_FN
 
 class CNNSpec(nn.Module):
     def __init__(self,
-        num_labels,
-        in_channels: int = 12,
+        num_labels: int,
+        in_channels: int,
+        inner_channels: int = (128, 128, 256, 256, 512),
+        kernel_size: int = 3,
+        downsampling_rate: int = 2,
         activation_fn: str | nn.Module = 'relu'
     ):
         super().__init__()
@@ -17,25 +20,31 @@ class CNNSpec(nn.Module):
             activation_fn()
         )
 
-        self.model = nn.Sequential(
-            nn.Conv1d(12, 16, 3, 2), # 53
-            activation_fn,
-            nn.Conv1d(16, 32, 3, 2), # 26
-            activation_fn,
-            nn.Conv1d(32, 64, 3, 2), # 12
-            activation_fn,
-            nn.Conv1d(64, 128, 3, 2), # 5
-            activation_fn,
-            nn.Conv1d(128, 128, 3, 2), # 2
-            activation_fn,
-            nn.Conv1d(128, 128, 1, 2), # 1
-            activation_fn,
-            nn.Conv1d(128, 256, 1),
-            activation_fn,
-            nn.Conv1d(256, num_labels, 1)
+        self.model = nn.Sequential()
+        for layer, out_channels in enumerate(inner_channels):
+            conv_block = nn.Sequential(
+                nn.Conv1d(
+                    in_channels, out_channels,
+                    kernel_size, padding=1
+                ),
+                nn.BatchNorm1d(out_channels), activation_fn,
+                nn.MaxPool1d(
+                    kernel_size, downsampling_rate, 1
+                )
+            )
+            self.model.add_module(
+                f'conv_block_{layer}',
+                conv_block
+            )
+            in_channels = out_channels
+
+        self.model.add_module(
+            'output_logits',
+            nn.Sequential(
+                nn.AdaptiveAvgPool1d(1), nn.Flatten(),
+                nn.Linear(out_channels, num_labels)
+            )
         )
 
     def forward(self, spectrograms):
-        preds = self.model(spectrograms)
-
-        return preds.flatten(start_dim=1) if self.training else preds
+        return self.model(spectrograms)
