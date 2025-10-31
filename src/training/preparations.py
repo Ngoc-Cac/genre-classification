@@ -53,12 +53,11 @@ def build_model(
     act_fn='relu',
     *,
     device: Literal['cuda', 'cpu'] = 'cpu',
-    checkpoint: str = ''
 ) -> tuple[CNNSpec, optim.Optimizer]:
     model = CNNSpec(
         num_labels,
         12 if feat_type == 'chroma' else 127,
-        act_fn
+        activation_fn=act_fn
     ).to(device)
 
     return model, _OPTIMIZERS[optimizer](model.parameters(), learning_rate)
