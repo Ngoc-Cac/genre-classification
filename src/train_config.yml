@@ -1,5 +1,5 @@
 data_args:
-  root: ../assets/gtzan  # path to the data
+  root: your_root_path  # path to the data
   first_n_secs: 20  # Whether to use only the first_n_secs of audio. -1 means use all
   train_ratio: .8  # The train-test split ratio
   feature_type: chroma  # Type of feature for spectrogram: chroma and midi
@@ -13,8 +13,7 @@ training_args:
   optimizer: adam  # Choose between adam, adamw and sgd
 
 inout:
-  # the name of the log directory.
   # A directory with this name will be created in ckpt_dir
-  logdir: logs
-  ckpt_dir: ../assets/checkpoints  # where the models should be checkpointed
+  logdir: name_of_logdir
+  ckpt_dir: your_checkpoint_dir  # where the models should be checkpointed
   checkpoint: ''  # previous checkpoint of the model.
