@@ -43,7 +43,8 @@ class GTZAN(Dataset):
         file = f"{self.root}/{genre}/{file}"
 
         sr, wave = wavfile.read(file)
-        wave = clip_signal(wave, sr, 0, self._n_secs)
+        if self._n_secs > 0:
+            wave = clip_signal(wave, sr, 0, self._n_secs)
 
         self._data_cache[index] = self._preprocessor(torch.tensor(wave), sr)
         self._label_cache[index] = self._genre_to_id[genre]
