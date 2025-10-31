@@ -42,7 +42,10 @@ def build_dataset(
         preprocessor=lambda wave, sr: spec_builder(wave / abs(wave).max())
     )
     train_test_ratio = [data_args['train_ratio'], 1 - data_args['train_ratio']]
-    return random_split(dataset, train_test_ratio)
+    return random_split(
+        dataset, train_test_ratio,
+        torch.Generator().manual_seed(data_args['seed'])
+    )
 
 
 def build_model(
