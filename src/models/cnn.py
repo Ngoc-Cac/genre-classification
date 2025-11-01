@@ -18,7 +18,7 @@ class CNNSpec(nn.Module):
         activation_fn = (
             _ACT_FN.get(activation_fn, nn.ReLU)()
             if isinstance(activation_fn, str) else
-            activation_fn()
+            activation_fn
         )
 
         self.model = nn.Sequential()
