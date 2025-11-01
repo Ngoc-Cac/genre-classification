@@ -63,3 +63,49 @@ class Bottleneck(Basic):
             nn.BatchNorm2d(inner_channels), self.activation_fn,
             nn.Conv2d(inner_channels, out_channels, 1)
         )
+
+
+class ResNet(nn.Module):
+    def __init__(self,
+        num_labels,
+        in_channels,
+        inner_channels = (64, 64, 128, 128, 256, 256),
+        num_linear_layers: int = 0,
+        kernel_size: int = 3,
+        activation_fn: str | nn.Module = 'relu'
+    ):
+        super().__init__()
+
+        self.activation_fn = (
+            _ACT_FN.get(activation_fn, nn.ReLU)()
+            if isinstance(activation_fn, str) else
+            activation_fn
+        )
+
+        self.model = nn.Sequential()
+        for layer, out_channels in enumerate(inner_channels):
+            self.model.add_module(
+                f'bottleneck_{layer}',
+                Bottleneck(
+                    in_channels, out_channels // in_channels,
+                    kernel_size, stride=(1 if layer % 2 else 2),
+                    activation_fn=self.activation_fn
+                )
+            )
+            in_channels = out_channels
+
+        self.model.add_module(
+            'global_pooling',
+            nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten())
+        )
+
+        for layer in range(num_linear_layers):
+            self.model.add_module(
+                f"linear_{layer}",
+                nn.Sequential(
+                    nn.Linear(out_channels, out_channels),
+                    self.activation_fn
+                )
+            )
+
+        self.model.add_module('output_logits', nn.Linear(out_channels, num_labels))
