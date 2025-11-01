@@ -21,6 +21,9 @@ _FEAT_TYPES = {
     'midi': LogFreqSpectrogram,
     'mfcc': MelSpectrogram
 }
+_WINDOW_FN = {
+    'hann': torch.hann_window
+}
 _OPTIMIZERS = {
     'adam': optim.Adam,
     'adamw': optim.AdamW,
@@ -37,7 +40,7 @@ def build_dataset(
 
     spec_builder = _FEAT_TYPES[data_args['feature_type']](
         sr, data_args['n_fft'],
-        window_fn=data_args['window_type']
+        window_fn=_WINDOW_FN[data_args['window_type']]
     )
     dataset = GTZAN(
         data_args['root'],
