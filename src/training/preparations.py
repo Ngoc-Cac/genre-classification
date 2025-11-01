@@ -4,6 +4,7 @@ import torch
 
 from torch import optim
 from torch.utils.data import random_split, Subset
+from torchaudio.transforms import MelSpectrogram
 
 from data_utils.dataset import GTZAN
 from models import CNNSpec
@@ -17,7 +18,8 @@ from typing import Literal
 
 _FEAT_TYPES = {
     'chroma': Chromagram,
-    'midi': LogFreqSpectrogram
+    'midi': LogFreqSpectrogram,
+    'mfcc': MelSpectrogram
 }
 _OPTIMIZERS = {
     'adam': optim.Adam,
@@ -34,7 +36,8 @@ def build_dataset(
         sr = wave_file.getframerate()
 
     spec_builder = _FEAT_TYPES[data_args['feature_type']](
-        sr, data_args['n_fft']
+        sr, data_args['n_fft'],
+        window_fn=data_args['window_type']
     )
     dataset = GTZAN(
         data_args['root'],
