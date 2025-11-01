@@ -109,3 +109,6 @@ class ResNet(nn.Module):
             )
 
         self.model.add_module('output_logits', nn.Linear(out_channels, num_labels))
+
+    def forward(self, waveforms):
+        return self.model(waveforms)
