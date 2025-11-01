@@ -3,7 +3,7 @@ import yaml
 
 
 _ALLOWED_VALUES = {
-    'feature_type': ['chroma', 'midi'],
+    'feature_type': ['chroma', 'midi', 'mfcc'],
     'window_type': ['hann'],
     'optimizer': ['adam', 'adamw', 'sgd']
 }
