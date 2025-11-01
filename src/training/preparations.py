@@ -39,7 +39,7 @@ def build_dataset(
     dataset = GTZAN(
         data_args['root'],
         data_args['first_n_secs'],
-        preprocessor=lambda wave, sr: spec_builder(wave / abs(wave).max())
+        preprocessor=lambda wave, sr: spec_builder(wave / abs(wave).max()).unflatten(0, (1, -1))
     )
     train_test_ratio = [data_args['train_ratio'], 1 - data_args['train_ratio']]
     return random_split(
@@ -58,8 +58,7 @@ def build_model(
     device: Literal['cuda', 'cpu'] = 'cpu',
 ) -> tuple[CNNSpec, optim.Optimizer]:
     model = CNNSpec(
-        num_labels,
-        12 if feat_type == 'chroma' else 127,
+        num_labels, 1,
         activation_fn=act_fn
     ).to(device)
 
