@@ -36,7 +36,7 @@ inout:
 #   batch_size: self-explanatory
 #   learning_rate: see above
 #   regularization_lambda: The lambda for L2 regularization, leave 0 for no regularization
-#   optimizer: adam  # Choose between adam, adamw and sgd
+#   optimizer: Choose between adam, adamw and sgd
 # inout:
 #   logdir: A directory with this name will be created in ckpt_dir
 #   ckpt_dir: Where the models should be checkpointed
