@@ -22,16 +22,16 @@ class Basic(nn.Module):
         )
 
         self.conv_block = nn.Sequential(
-            nn.Conv1d(in_channels, in_channels, kernel_size, stride, 1),
-            nn.BatchNorm1d(in_channels),
+            nn.Conv2d(in_channels, in_channels, kernel_size, stride, 1),
+            nn.BatchNorm2d(in_channels),
             self.activation_fn,
-            nn.Conv1d(in_channels, out_channels, kernel_size, padding=1),
-            nn.BatchNorm1d(out_channels)
+            nn.Conv2d(in_channels, out_channels, kernel_size, padding=1),
+            nn.BatchNorm2d(out_channels)
         )
 
         self.residual_connection = (
             (lambda x: x) if stride == 1 else
-            nn.Conv1d(
+            nn.Conv2d(
                 in_channels, out_channels,
                 1, stride
             )
@@ -54,12 +54,12 @@ class Bottleneck(Basic):
         super().__init__(in_channels, channel_mult, kernel_size, stride, activation_fn)
 
         out_channels = in_channels * channel_mult
-        inner_channels = in_channels * channel_mult // 4
+        inner_channels = max(in_channels * channel_mult // 4, 1)  # in case results in 0
 
         self.conv_block = nn.Sequential(
-            nn.Conv1d(in_channels, inner_channels, 1),
-            nn.BatchNorm1d(inner_channels), activation_fn,
-            nn.Conv1d(inner_channels, inner_channels, kernel_size, stride, 1),
-            nn.BatchNorm1d(inner_channels), activation_fn,
-            nn.Conv1d(inner_channels, out_channels, 1)
+            nn.Conv2d(in_channels, inner_channels, 1),
+            nn.BatchNorm2d(inner_channels), self.activation_fn,
+            nn.Conv2d(inner_channels, inner_channels, kernel_size, stride, 1),
+            nn.BatchNorm2d(inner_channels), self.activation_fn,
+            nn.Conv2d(inner_channels, out_channels, 1)
         )
