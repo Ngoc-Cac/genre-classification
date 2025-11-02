@@ -46,7 +46,7 @@ class CNNSpec(nn.Module):
             in_channels = out_channels
 
         self.model.add_module(
-            'global_avg_pool',
+            'global_pooling',
             nn.Sequential(
                 nn.AdaptiveAvgPool2d(1), nn.Flatten(),
             )
