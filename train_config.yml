@@ -1,5 +1,5 @@
 data_args:
-  root: your_root_path
+  root: path_to_dataset
   first_n_secs: 20
   train_ratio: .8
   seed: 4
@@ -8,14 +8,14 @@ data_args:
   window_type: hann
 
 training_args:
-  epochs: 5
+  epochs: 100
   batch_size: 32
-  learning_rate: 1.0e-4
+  learning_rate: 1.0e-5
   regularization_lambda: 0
   optimizer: adam
 
 inout:
-  logdir: name_of_logdir
+  logdir: logs
   ckpt_dir: your_checkpoint_dir
   checkpoint: latest
 
