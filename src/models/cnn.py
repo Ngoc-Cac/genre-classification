@@ -7,10 +7,11 @@ class CNNSpec(nn.Module):
     def __init__(self,
         num_labels: int,
         in_channels: int,
-        inner_channels: int = (128, 128, 256, 256, 512),
-        num_linear_layers: int = 3,
+        inner_channels: tuple[int],
+        downsampling_rates: tuple[int],
+        num_linear_layers: int = 0,
+        *,
         kernel_size: int = 3,
-        downsampling_rate: int = 2,
         activation_fn: str | nn.Module = 'relu'
     ):
         super().__init__()
@@ -22,17 +23,25 @@ class CNNSpec(nn.Module):
         )
 
         self.model = nn.Sequential()
-        for layer, out_channels in enumerate(inner_channels):
+        layer_iter = zip(
+            inner_channels, downsampling_rates,
+            strict=True
+        )
+        for layer, (out_channels, downsampling_rate) in enumerate(layer_iter):
             conv_block = nn.Sequential(
                 nn.Conv2d(
                     in_channels, out_channels,
                     kernel_size, padding=1
                 ),
-                nn.BatchNorm2d(out_channels), activation_fn,
-                nn.AvgPool2d(
-                    kernel_size, downsampling_rate, 1
-                )
+                nn.BatchNorm2d(out_channels),
+                activation_fn
             )
+
+            if downsampling_rate > 1:
+                conv_block.append(nn.AvgPool2d(
+                    kernel_size, downsampling_rate, 1
+                ))
+
             self.model.add_module(f'conv_block_{layer}', conv_block)
             in_channels = out_channels
 
