@@ -34,8 +34,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # build dataset
 train_set, test_set = build_dataset(configs['data_args'])
-train_loader = DataLoader(train_set, configs['training_args']['batch_size'], False)
-test_loader = DataLoader(test_set, configs['training_args']['batch_size'], False)
+train_loader = DataLoader(train_set, configs['training_args']['batch_size'], drop_last=True)
+test_loader = DataLoader(test_set, configs['training_args']['batch_size'], drop_last=True)
 
 # build model
 model, optimizer = build_model(
