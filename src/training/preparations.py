@@ -7,7 +7,7 @@ from torch.utils.data import random_split, Subset
 from torchaudio.transforms import MelSpectrogram
 
 from data_utils.dataset import GTZAN
-from models import CNNSpec
+from models import CNNSpec, ResNet
 from spectrograms import (
     Chromagram,
     LogFreqSpectrogram,
@@ -65,7 +65,15 @@ def build_model(
 ) -> tuple[CNNSpec, optim.Optimizer]:
     model = CNNSpec(
         num_labels, 1,
+        (64, 64, 64, 128, 128, 128, 256, 256, 256),
+        (2, 1, 1, 2, 1, 1, 2, 1, 1),
         activation_fn=act_fn
     ).to(device)
+    # model = ResNet(
+    #     num_labels, 1,
+    #     (64, 64, 64, 128, 128, 128, 256, 256, 256),
+    #     (2, 1, 1, 2, 1, 1, 2, 1, 1),
+    #     activation_fn=act_fn
+    # ).to(device)
 
     return model, _OPTIMIZERS[optimizer](model.parameters(), learning_rate)
