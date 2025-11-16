@@ -48,6 +48,9 @@ model, optimizer = build_model(
     configs['training_args']['learning_rate'],
     device='cuda'
 )
+if configs['training_args']['distributed_training']:
+    if torch.cuda.device_count() > 1:
+        model = torch.nn.DataParallel(model)
 if configs['inout']['checkpoint']:
     ckpt = torch.load(configs['inout']['checkpoint'], weights_only=True)
     model.load_state_dict(ckpt['model'])
@@ -59,6 +62,9 @@ loss_fn = lambda y_hat, y: (
     configs['training_args']['regularization_lambda']
         * sum(w.pow(2).sum() for w in model.parameters())
 )
+
+gradient_scaler = torch.amp.grad_scaler.GradScaler(enabled=configs['training_args']['mixed_precision'])
+
 
 # run training
 tb_logger = SummaryWriter(
@@ -80,11 +86,16 @@ for epoch in pbar:
         data = data.to(device)
         labels = labels.to(device)
 
-        preds = model(data)
-        loss = loss_fn(preds, labels)
+        with torch.autocast(
+            device_type='cuda', dtype=torch.float16,
+            enabled=configs['training_args']['mixed_precision']
+        ):
+            preds = model(data)
+            loss = loss_fn(preds, labels)
 
-        loss.backward()
-        optimizer.step()
+        gradient_scaler.scale(loss).backward()
+        gradient_scaler.step(optimizer)
+        gradient_scaler.update()
         optimizer.zero_grad()
 
         train_loss += loss.item()
@@ -104,8 +115,13 @@ for epoch in pbar:
         for data, labels in test_loader:
             data = data.to(device)
             labels = labels.to(device)
-            preds = model(data)
-            test_loss += loss_fn(preds, labels).item()
+            with torch.autocast(
+                device_type='cuda', dtype=torch.float16,
+                enabled=configs['training_args']['mixed_precision']
+            ):
+                preds = model(data)
+                test_loss += loss_fn(preds, labels).item()
+
             test_acc += (labels == preds.argmax(dim=1)).sum().item()
 
     tb_logger.add_scalars(
@@ -127,6 +143,7 @@ for epoch in pbar:
     tb_logger.flush()
 
 tb_logger.close()
+
 
 now = datetime.datetime.now()
 timestamp = (

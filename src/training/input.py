@@ -86,6 +86,18 @@ def validate_training_args(training_args: dict):
     if training_args['optimizer'] not in OPTIMIZERS:
         raise ValueError(f'optimizer should be one of: {list(OPTIMIZERS.keys())}')
 
+    if not isinstance(training_args['distributed_training'], bool):
+        raise TypeError(
+            'Found invalid type for distributed_training parameter! '
+            'Please specify as either true or false'
+        )
+
+    if not isinstance(training_args['mixed_precision'], bool):
+        raise TypeError(
+            'Found invalid type for mixed_precision parameter! '
+            'Please specify as either true or false'
+        )
+
 def validate_inout_args(inout: dict):
     if not os.path.exists(inout['ckpt_dir']):
         os.makedirs(inout['ckpt_dir'])

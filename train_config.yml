@@ -13,6 +13,8 @@ training_args:
   learning_rate: 1.0e-5
   regularization_lambda: 0
   optimizer: adam
+  distributed_training: false
+  mixed_precision: false
 
 inout:
   logdir: logs
