@@ -4,31 +4,13 @@ import torch
 
 from torch import optim
 from torch.utils.data import random_split, Subset
-from torchaudio.transforms import MelSpectrogram
 
 from data_utils.dataset import GTZAN
 from models import CNNSpec, ResNet
-from spectrograms import (
-    Chromagram,
-    LogFreqSpectrogram,
-)
+from .structs import FEATURE_TYPES, WINDOW_FUNCTIONS, OPTIMIZERS
 
 from typing import Literal
 
-
-_FEAT_TYPES = {
-    'chroma': Chromagram,
-    'midi': LogFreqSpectrogram,
-    'mfcc': MelSpectrogram
-}
-_WINDOW_FN = {
-    'hann': torch.hann_window
-}
-_OPTIMIZERS = {
-    'adam': optim.Adam,
-    'adamw': optim.AdamW,
-    'sgd': optim.SGD
-}
 
 def build_dataset(
     data_args: dict
@@ -38,9 +20,9 @@ def build_dataset(
     with wave.open(temp_file) as wave_file:
         sr = wave_file.getframerate()
 
-    spec_builder = _FEAT_TYPES[data_args['feature_type']](
+    spec_builder = FEATURE_TYPES[data_args['feature_type']](
         sr, data_args['n_fft'],
-        window_fn=_WINDOW_FN[data_args['window_type']]
+        window_fn=WINDOW_FUNCTIONS[data_args['window_type']]
     )
     dataset = GTZAN(
         data_args['root'],
@@ -56,7 +38,6 @@ def build_dataset(
 
 def build_model(
     num_labels,
-    feat_type,
     optimizer,
     learning_rate,
     act_fn='relu',
@@ -76,4 +57,4 @@ def build_model(
     #     activation_fn=act_fn
     # ).to(device)
 
-    return model, _OPTIMIZERS[optimizer](model.parameters(), learning_rate)
+    return model, OPTIMIZERS[optimizer](model.parameters(), learning_rate)

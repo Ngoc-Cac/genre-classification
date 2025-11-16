@@ -1,12 +1,8 @@
 import os
 import yaml
 
+from .structs import FEATURE_TYPES, WINDOW_FUNCTIONS, OPTIMIZERS
 
-_ALLOWED_VALUES = {
-    'feature_type': ['chroma', 'midi', 'mfcc'],
-    'window_type': ['hann'],
-    'optimizer': ['adam', 'adamw', 'sgd']
-}
 
 def parse_yml_config(filepath: str):
     with open(filepath) as file:
@@ -32,8 +28,8 @@ def validate_data_args(data_args: dict):
     elif data_args['first_n_secs'] <= 0:
         data_args['first_n_secs'] = -1
 
-    if data_args['feature_type'] not in _ALLOWED_VALUES['feature_type']:
-        raise ValueError(f'feature_type should be one of: {_ALLOWED_VALUES["feature_type"]}')
+    if data_args['feature_type'] not in FEATURE_TYPES:
+        raise ValueError(f'feature_type should be one of: {list(FEATURE_TYPES.keys())}')
 
     if not isinstance(data_args['n_fft'], int):
         raise TypeError('n_fft should be a positive integer!')
@@ -43,8 +39,8 @@ def validate_data_args(data_args: dict):
             'Please specify as a positive integer.'
         )
 
-    if data_args['window_type'] not in _ALLOWED_VALUES['window_type']:
-        raise ValueError(f'window_type should be one of : {_ALLOWED_VALUES["window_type"]}')
+    if data_args['window_type'] not in WINDOW_FUNCTIONS:
+        raise ValueError(f'window_type should be one of : {list(WINDOW_FUNCTIONS.keys())}')
     
     if not isinstance(data_args['train_ratio'], float):
         raise TypeError('train_ratio should be a float between 0 and 11')
@@ -87,8 +83,8 @@ def validate_training_args(training_args: dict):
             'Please specify as a positive number'
         )
 
-    if training_args['optimizer'] not in _ALLOWED_VALUES['optimizer']:
-        raise ValueError(f'optimizer should be one of: {_ALLOWED_VALUES["optimizer"]}')
+    if training_args['optimizer'] not in OPTIMIZERS:
+        raise ValueError(f'optimizer should be one of: {list(OPTIMIZERS.keys())}')
 
 def validate_inout_args(inout: dict):
     if not os.path.exists(inout['ckpt_dir']):
