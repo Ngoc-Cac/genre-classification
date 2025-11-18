@@ -39,6 +39,9 @@ inout:
 #   learning_rate: see above
 #   regularization_lambda: The lambda for L2 regularization, leave 0 for no regularization
 #   optimizer: Choose between adam, adamw and sgd
+#   distributed_training: Whether or not to run distributed training. Only available
+#     if multiple GPUs are present.
+#   mixed_precision: Whether or not to run mixed precision training with fp16.
 # inout:
 #   logdir: A directory with this name will be created in ckpt_dir
 #   ckpt_dir: Where the models should be checkpointed
