@@ -1,7 +1,12 @@
 import os
 import yaml
 
-from .structs import FEATURE_TYPES, WINDOW_FUNCTIONS, OPTIMIZERS
+from .structs import (
+    FEATURE_TYPES,
+    MODELS,
+    OPTIMIZERS,
+    WINDOW_FUNCTIONS,
+)
 
 
 def parse_yml_config(filepath: str):
@@ -12,6 +17,7 @@ def parse_yml_config(filepath: str):
     validate_data_args(configs['data_args'])
     validate_training_args(configs['training_args'])
     validate_inout_args(configs['inout'])
+    validate_model_architecure(configs['model'])
 
     return configs
 
@@ -115,4 +121,44 @@ def validate_inout_args(inout: dict):
         raise FileNotFoundError(
             'checkpoint does not exist! '
             'Please check if the given path is correct'
+        )
+
+def validate_model_architecure(model_args: dict):
+    if model_args['backbone'] not in MODELS:
+        raise ValueError(
+            "Backbone of model must be 'cnn' or 'resnet'. "
+            f"Found {model_args['backbone']}."
+        )
+
+    if not all(isinstance(i, int) for i in model_args['inner_channels']):
+        raise TypeError(
+            "Found incorrect type for inner_channels! "
+            "Inner channels must be a list of positive integers."
+        )
+    elif not all(i > 0 for i in model_args['inner_channels']):
+        raise ValueError(
+            "Found negative number in inner_channels! "
+            "Inner channels must be a list of positive integers."
+        )
+
+    if not all(isinstance(i, int) for i in model_args['downsampling_rates']):
+        raise TypeError(
+            "Found incorrect type for downsampling_rates. "
+            "Inner channels must be a list of positive integers."
+        )
+    elif not all(i > 0 for i in model_args['downsampling_rates']):
+        raise ValueError(
+            "Found negative number in downsampling_rates. "
+            "Inner channels must be a list of positive integers."
+        )
+
+    if not isinstance(model_args['num_linear_layers'], int):
+        raise TypeError(
+            "Found incorrect type for num_linear_layers! "
+            "Please specify as a non-negative integer."
+        )
+    elif model_args['num_linear_layers'] < 0:
+        raise ValueError(
+            "Found negative number for num_linear_layers! "
+            "Please specify as a non-negative integer."
         )

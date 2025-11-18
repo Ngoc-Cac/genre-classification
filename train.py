@@ -43,10 +43,13 @@ test_loader = DataLoader(test_set, configs['training_args']['batch_size'], drop_
 # build model
 model, optimizer = build_model(
     len(train_set.dataset._genre_to_id),
-    configs['data_args']['feature_type'],
+    configs['model']['backbone'],
     configs['training_args']['optimizer'],
     configs['training_args']['learning_rate'],
-    device='cuda'
+    device='cuda',
+    inner_channels=configs['model']['inner_channels'],
+    downsampling_rates=configs['model']['downsampling_rates'],
+    num_linear_layers=configs['model']['num_linear_layers'],
 )
 
 gradient_scaler = torch.amp.grad_scaler.GradScaler(enabled=configs['training_args']['mixed_precision'])
