@@ -6,6 +6,8 @@ from spectrograms import (
     LogFreqSpectrogram
 )
 
+from models import CNNSpec, ResNet
+
 
 FEATURE_TYPES = {
     'chroma': Chromagram,
@@ -21,4 +23,9 @@ OPTIMIZERS = {
 
 WINDOW_FUNCTIONS = {
     'hann': torch.hann_window
+}
+
+MODELS = {
+    'cnn': CNNSpec,
+    'resnet': ResNet
 }

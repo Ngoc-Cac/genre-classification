@@ -7,7 +7,12 @@ from torch.utils.data import random_split, Subset
 
 from data_utils.dataset import GTZAN
 from models import CNNSpec, ResNet
-from .structs import FEATURE_TYPES, WINDOW_FUNCTIONS, OPTIMIZERS
+from .structs import (
+    FEATURE_TYPES,
+    MODELS,
+    OPTIMIZERS,
+    WINDOW_FUNCTIONS,
+)
 
 from typing import Literal
 
@@ -37,24 +42,15 @@ def build_dataset(
 
 
 def build_model(
-    num_labels,
-    optimizer,
-    learning_rate,
-    act_fn='relu',
+    num_labels: int,
+    backbone_type: Literal['cnn', 'resnet'],
+    learning_rate: int | float,
+    optimizer: Literal['adam', 'adamw', 'sgd'],
     *,
     device: Literal['cuda', 'cpu'] = 'cpu',
-) -> tuple[CNNSpec, optim.Optimizer]:
-    model = CNNSpec(
-        num_labels, 1,
-        (64, 64, 64, 128, 128, 128, 256, 256, 256),
-        (2, 1, 1, 2, 1, 1, 2, 1, 1),
-        activation_fn=act_fn
+    **model_kwargs
+) -> tuple[CNNSpec | ResNet, optim.Optimizer]:
+    model = MODELS[backbone_type](
+        num_labels, 1, **model_kwargs
     ).to(device)
-    # model = ResNet(
-    #     num_labels, 1,
-    #     (64, 64, 64, 128, 128, 128, 256, 256, 256),
-    #     (2, 1, 1, 2, 1, 1, 2, 1, 1),
-    #     activation_fn=act_fn
-    # ).to(device)
-
     return model, OPTIMIZERS[optimizer](model.parameters(), learning_rate)
