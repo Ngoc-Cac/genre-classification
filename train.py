@@ -44,8 +44,8 @@ test_loader = DataLoader(test_set, configs['training_args']['batch_size'], drop_
 model, optimizer = build_model(
     len(train_set.dataset._genre_to_id),
     configs['model']['backbone'],
-    configs['training_args']['optimizer'],
     configs['training_args']['learning_rate'],
+    configs['training_args']['optimizer'],
     device='cuda',
     inner_channels=configs['model']['inner_channels'],
     downsampling_rates=configs['model']['downsampling_rates'],
