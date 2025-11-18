@@ -48,6 +48,9 @@ model, optimizer = build_model(
     configs['training_args']['learning_rate'],
     device='cuda'
 )
+
+gradient_scaler = torch.amp.grad_scaler.GradScaler(enabled=configs['training_args']['mixed_precision'])
+
 if configs['training_args']['distributed_training']:
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
@@ -55,6 +58,7 @@ if configs['inout']['checkpoint']:
     ckpt = torch.load(configs['inout']['checkpoint'], weights_only=True)
     model.load_state_dict(ckpt['model'])
     optimizer.load_state_dict(ckpt['optimizer'])
+    gradient_scaler.load_state_dict(ckpt['gradient_scaler'])
 
 cpe_loss = torch.nn.CrossEntropyLoss()
 loss_fn = lambda y_hat, y: (
@@ -62,8 +66,6 @@ loss_fn = lambda y_hat, y: (
     configs['training_args']['regularization_lambda']
         * sum(w.pow(2).sum() for w in model.parameters())
 )
-
-gradient_scaler = torch.amp.grad_scaler.GradScaler(enabled=configs['training_args']['mixed_precision'])
 
 
 # run training
@@ -105,10 +107,11 @@ for epoch in pbar:
             'step/train_loss',
             loss, (epoch - 1) * len(train_loader) + step
         )
-        # tb_logger.add_scalar(
-        #     'step/learning_rate',
-        #     lr, (epoch - 1) * len(train_loader) + step
-        # )
+        tb_logger.add_scalar(
+            'step/learning_rate',
+            configs['training_args']['learning_rate'],
+            (epoch - 1) * len(train_loader) + step
+        )
 
     model.eval()
     with torch.no_grad():
@@ -152,7 +155,8 @@ timestamp = (
 )
 
 torch.save({
+    'epoch': epoch,
     'model': model.state_dict(),
     'optimizer': optimizer.state_dict(),
-    'epoch': epoch
+    'gradient_scaler': gradient_scaler.state_dict()
 }, f"{configs['inout']['ckpt_dir']}/{timestamp}_cnn.pth")
