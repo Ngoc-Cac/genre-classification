@@ -23,7 +23,7 @@ def parse_yml_config(filepath: str):
         "backbone": configs['model']['backbone'],
         "kwargs": {
             key: value
-            for key, value in configs['model'].values()
+            for key, value in configs['model'].items()
             if key != 'backbone'
         }
     }
