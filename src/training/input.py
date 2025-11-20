@@ -19,6 +19,15 @@ def parse_yml_config(filepath: str):
     validate_inout_args(configs['inout'])
     validate_model_architecure(configs['model'])
 
+    configs['model'] = {
+        "backbone": configs['model']['backbone'],
+        "kwargs": {
+            key: value
+            for key, value in configs['model'].values()
+            if key != 'backbone'
+        }
+    }
+
     return configs
 
 

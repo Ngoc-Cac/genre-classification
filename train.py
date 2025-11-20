@@ -46,10 +46,7 @@ model, optimizer = build_model(
     configs['model']['backbone'],
     configs['training_args']['learning_rate'],
     configs['training_args']['optimizer'],
-    device='cuda',
-    inner_channels=configs['model']['inner_channels'],
-    downsampling_rates=configs['model']['downsampling_rates'],
-    num_linear_layers=configs['model']['num_linear_layers'],
+    device=device, **configs['model']['kwargs']
 )
 
 gradient_scaler = torch.amp.grad_scaler.GradScaler(enabled=configs['training_args']['mixed_precision'])
