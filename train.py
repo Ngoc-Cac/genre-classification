@@ -63,8 +63,11 @@ if configs['inout']['checkpoint']:
 cpe_loss = torch.nn.CrossEntropyLoss()
 loss_fn = lambda y_hat, y: (
     cpe_loss(y_hat, y) +
-    configs['training_args']['regularization_lambda']
-        * sum(w.pow(2).sum() for w in model.parameters())
+    configs['training_args']['regularization_lambda'] / 2
+        * sum(
+            (w ** 2).sum() for name, w in model.named_parameters()
+            if name == 'weight'
+        )
 )
 
 
