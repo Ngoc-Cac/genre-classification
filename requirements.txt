@@ -12,4 +12,8 @@ pyyaml>=6.0.3
 tensorboard>=2.20
 tqdm>=4.67.1
 
+# for 8bit optimizers
+bitsandbytes[security]>=0.48.2
+
+# misc
 ipykernel[security]>=7.0.1

@@ -5,6 +5,7 @@ from .structs import (
     FEATURE_TYPES,
     MODELS,
     OPTIMIZERS,
+    OPTIMIZERS_8BIT,
     WINDOW_FUNCTIONS,
 )
 
@@ -104,8 +105,17 @@ def validate_training_args(training_args: dict):
             'Please specify as a positive number'
         )
 
-    if training_args['optimizer'] not in OPTIMIZERS:
-        raise ValueError(f'optimizer should be one of: {list(OPTIMIZERS.keys())}')
+    if training_args['use_8bit_optimizer']:
+        if OPTIMIZERS_8BIT is None:
+            raise ModuleNotFoundError(
+                'Cannot find bitsandbytes! Make sure bitsandbytes is '
+                'installed in order to use 8bit-optimization.'
+            )
+        avail_opts = OPTIMIZERS_8BIT
+    else:
+        avail_opts = OPTIMIZERS
+    if training_args['optimizer'] not in avail_opts:
+        raise ValueError(f'optimizer should be one of: {list(avail_opts.keys())}')
 
     if not isinstance(training_args['distributed_training'], bool):
         raise TypeError(
