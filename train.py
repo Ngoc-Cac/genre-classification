@@ -84,6 +84,7 @@ pbar = tqdm.tqdm(
     desc='Epoch'
 )
 for epoch in pbar:
+    prev_loss = test_loss if epoch else None
     train_loss, train_acc, test_loss, test_acc = 0, 0, 0, 0
 
     model.train()
@@ -105,7 +106,7 @@ for epoch in pbar:
 
         train_loss += loss.item()
         train_acc += (labels == preds.argmax(dim=1)).sum().item()
-        pbar.set_postfix({'loss': loss.item()})
+        pbar.set_postfix({'loss': loss.item(), 'test_loss': prev_loss})
         tb_logger.add_scalar(
             'step/train_loss',
             loss, (epoch - 1) * len(train_loader) + step
