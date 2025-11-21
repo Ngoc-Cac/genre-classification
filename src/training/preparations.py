@@ -30,9 +30,12 @@ def build_dataset(
     with wave.open(temp_file) as wave_file:
         sr = wave_file.getframerate()
 
+    kwargs = {"window_fn": WINDOW_FUNCTIONS[data_args['window_type']]}
+    if data_args['feature_type'] == 'mfcc':
+        kwargs['n_mels'] = data_args['n_mels']
+
     spec_builder = FEATURE_TYPES[data_args['feature_type']](
-        sr, data_args['n_fft'],
-        window_fn=WINDOW_FUNCTIONS[data_args['window_type']]
+        sr, data_args['n_fft'], **kwargs
     )
     dataset = GTZAN(
         data_args['root'],
