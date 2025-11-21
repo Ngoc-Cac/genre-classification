@@ -83,8 +83,8 @@ pbar = tqdm.tqdm(
     ),
     desc='Epoch'
 )
+prev_loss = None
 for epoch in pbar:
-    prev_loss = test_loss if epoch else None
     train_loss, train_acc, test_loss, test_acc = 0, 0, 0, 0
 
     model.train()
@@ -131,11 +131,13 @@ for epoch in pbar:
 
             test_acc += (labels == preds.argmax(dim=1)).sum().item()
 
+    prev_loss = test_loss = test_loss / len(test_loader)
+
     tb_logger.add_scalars(
         'epoch/loss',
         {
             'train': train_loss / len(train_loader),
-            'test': test_loss / len(test_loader),
+            'test': test_loss,
         },
         epoch
     )
@@ -148,6 +150,22 @@ for epoch in pbar:
         epoch
     )
     tb_logger.flush()
+
+tb_logger.add_hparams(
+    {
+        'batch_size': configs['training_args']['batch_size'],
+        'learning_rate': configs['training_args']['learning_rate'],
+        'regularization': configs['training_args']['regularization_lambda'],
+        'optimizer': configs['training_args']['optimizer'],
+        'feature_type': configs['data_args']['feature_type']
+    },
+    {
+        'hparam/train_accuracy': train_acc,
+        'hparam/test_accuracy': test_acc,
+        'hparam/train_loss': train_loss,
+        'hparam/test_loss': test_loss
+    }
+)
 
 tb_logger.close()
 
