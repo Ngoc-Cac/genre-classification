@@ -17,6 +17,11 @@ from .structs import (
 from typing import Literal
 
 
+def _normalize_spec(spec):
+    db_spec = torch.log(1 + spec)
+    return (db_spec - db_spec.min()) / (db_spec.max() - db_spec.min())
+
+
 def build_dataset(
     data_args: dict
 ) -> tuple[Subset, Subset]:
@@ -32,7 +37,9 @@ def build_dataset(
     dataset = GTZAN(
         data_args['root'],
         data_args['first_n_secs'],
-        preprocessor=lambda wave, sr: spec_builder(wave / abs(wave).max()).unflatten(0, (1, -1))
+        preprocessor=lambda wave, sr: _normalize_spec(
+            spec_builder(wave / abs(wave).max()).unflatten(0, (1, -1))
+        )
     )
     train_test_ratio = [data_args['train_ratio'], 1 - data_args['train_ratio']]
     return random_split(
