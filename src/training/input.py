@@ -48,7 +48,7 @@ def validate_data_args(data_args: dict):
         raise ValueError(f'feature_type should be one of: {list(FEATURE_TYPES.keys())}')
 
     if data_args['feature_type'] == 'mfcc':
-        if isinstance(data_args['n_mels'], int):
+        if not isinstance(data_args['n_mels'], int):
             raise TypeError('n_mels should be a positive integer!')
         elif data_args['n_mels'] <= 0:
             raise ValueError('n_mels should be a positive integer!')
