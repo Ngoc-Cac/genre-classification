@@ -67,7 +67,7 @@ loss_fn = lambda y_hat, y: (
     configs['training_args']['regularization_lambda'] / 2
         * sum(
             (w ** 2).sum() for name, w in model.named_parameters()
-            if name == 'weight'
+            if name.endswith('weight')
         )
 )
 
@@ -94,7 +94,7 @@ for epoch in pbar:
         labels = labels.to(device)
 
         with torch.autocast(
-            device_type='cuda', dtype=torch.float16,
+            device_type=device, dtype=torch.float16,
             enabled=configs['training_args']['mixed_precision']
         ):
             preds = model(data)
@@ -124,7 +124,7 @@ for epoch in pbar:
             data = data.to(device)
             labels = labels.to(device)
             with torch.autocast(
-                device_type='cuda', dtype=torch.float16,
+                device_type=device, dtype=torch.float16,
                 enabled=configs['training_args']['mixed_precision']
             ):
                 preds = model(data)
