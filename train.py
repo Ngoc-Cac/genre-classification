@@ -46,6 +46,7 @@ model, optimizer = build_model(
     configs['model']['backbone'],
     configs['training_args']['learning_rate'],
     configs['training_args']['optimizer'],
+    configs['training_args']['use_8bit_optimizer'],
     device=device, **configs['model']['kwargs']
 )
 

@@ -11,6 +11,7 @@ from .structs import (
     FEATURE_TYPES,
     MODELS,
     OPTIMIZERS,
+    OPTIMIZERS_8BIT,
     WINDOW_FUNCTIONS,
 )
 
@@ -56,6 +57,7 @@ def build_model(
     backbone_type: Literal['cnn', 'resnet'],
     learning_rate: int | float,
     optimizer: Literal['adam', 'adamw', 'sgd'],
+    use_8bit_optimizers: bool = False,
     *,
     device: Literal['cuda', 'cpu'] = 'cpu',
     **model_kwargs
@@ -63,4 +65,9 @@ def build_model(
     model = MODELS[backbone_type](
         num_labels, 1, **model_kwargs
     ).to(device)
-    return model, OPTIMIZERS[optimizer](model.parameters(), learning_rate)
+
+    optimizer = (
+        OPTIMIZERS_8BIT if use_8bit_optimizers else OPTIMIZERS
+    )[optimizer]
+
+    return model, optimizer(model.parameters(), learning_rate)
