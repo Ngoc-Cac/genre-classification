@@ -34,6 +34,7 @@ and run training accordingly."""
 args = parse_args(parser)
 configs = parse_yml_config(args.config_file)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+torch.manual_seed(configs['data_args']['seed'])
 
 # build dataset
 train_set, test_set = build_dataset(configs['data_args'])

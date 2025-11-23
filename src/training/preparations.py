@@ -46,10 +46,7 @@ def build_dataset(
         )
     )
     train_test_ratio = [data_args['train_ratio'], 1 - data_args['train_ratio']]
-    return random_split(
-        dataset, train_test_ratio,
-        torch.Generator().manual_seed(data_args['seed'])
-    )
+    return random_split(dataset, train_test_ratio)
 
 
 def build_model(
