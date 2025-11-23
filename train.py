@@ -14,6 +14,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from training.input import parse_yml_config
 from training.preparations import build_dataset, build_model
+from training.loops import train_loop, eval_loop
 
 
 def parse_args(parser: argparse.ArgumentParser):
@@ -74,6 +75,19 @@ loss_fn = lambda y_hat, y: (
 
 
 # run training
+def log_train_step(step, loss):
+    global pbar, tb_logger, epoch, train_loader, prev_loss
+    pbar.set_postfix({'loss': loss.item(), 'test_loss': prev_loss})
+    tb_logger.add_scalar(
+        'step/train_loss',
+        loss, (epoch - 1) * len(train_loader) + step
+    )
+    tb_logger.add_scalar(
+        'step/learning_rate',
+        configs['training_args']['learning_rate'],
+        (epoch - 1) * len(train_loader) + step
+    )
+
 tb_logger = SummaryWriter(
     f"{configs['inout']['ckpt_dir']}/{configs['inout']['logdir']}"
 )
@@ -85,53 +99,22 @@ pbar = tqdm.tqdm(
     ),
     desc='Epoch'
 )
+mixed_prec = configs['training_args']['mixed_precision']
 prev_loss = None
 for epoch in pbar:
-    train_loss, train_acc, test_loss, test_acc = 0, 0, 0, 0
-
     model.train()
-    for step, (data, labels) in enumerate(train_loader):
-        data = data.to(device)
-        labels = labels.to(device)
-
-        with torch.autocast(
-            device_type=device, dtype=torch.float16,
-            enabled=configs['training_args']['mixed_precision']
-        ):
-            preds = model(data)
-            loss = loss_fn(preds, labels)
-
-        gradient_scaler.scale(loss).backward()
-        gradient_scaler.step(optimizer)
-        gradient_scaler.update()
-        optimizer.zero_grad()
-
-        train_loss += loss.item()
-        train_acc += (labels == preds.argmax(dim=1)).sum().item()
-        pbar.set_postfix({'loss': loss.item(), 'test_loss': prev_loss})
-        tb_logger.add_scalar(
-            'step/train_loss',
-            loss, (epoch - 1) * len(train_loader) + step
-        )
-        tb_logger.add_scalar(
-            'step/learning_rate',
-            configs['training_args']['learning_rate'],
-            (epoch - 1) * len(train_loader) + step
-        )
+    train_loss, train_acc = train_loop(
+        model, train_loader, loss_fn,
+        optimizer, gradient_scaler, device,
+        mixed_precision=mixed_prec,
+        callback_fn=log_train_step
+    )
 
     model.eval()
-    with torch.no_grad():
-        for data, labels in test_loader:
-            data = data.to(device)
-            labels = labels.to(device)
-            with torch.autocast(
-                device_type=device, dtype=torch.float16,
-                enabled=configs['training_args']['mixed_precision']
-            ):
-                preds = model(data)
-                test_loss += loss_fn(preds, labels).item()
-
-            test_acc += (labels == preds.argmax(dim=1)).sum().item()
+    test_loss, test_acc = eval_loop(
+        model, test_loader, loss_fn, device=device,
+        mixed_precision=mixed_prec
+    )
 
     prev_loss = test_loss = test_loss / len(test_loader)
 
