@@ -1,8 +1,59 @@
+import torch
+
 from torch import nn
 
-from .structs import ACT_FN
+from .structs import ACT_FN, POOLING_TYPES
+
+from typing import Literal
+
+__all__ = (
+    'Conv2D',
+    'Basic',
+    'Bottleneck'
+)
 
 
+class Conv2D(nn.Module):
+    def __init__(self,
+        in_channels: int,
+        out_channels: int,
+        downsampling_rate: int = 1,
+        kernel_size: int = 3,
+        *,
+        activation_fn: str | nn.Module = 'relu',
+        pooling_type: Literal['max', 'average'] = 'average'
+    ):
+        super().__init__()
+
+        activation_fn = (
+            ACT_FN.get(activation_fn, nn.ReLU)()
+            if isinstance(activation_fn, str) else
+            activation_fn
+        )
+
+        self.conv = nn.Sequential(
+            nn.Conv2d(
+                in_channels, out_channels,
+                kernel_size, padding=1
+            ),
+            nn.BatchNorm2d(out_channels),
+            activation_fn
+        )
+        if downsampling_rate > 1:
+            self.conv.append(
+                POOLING_TYPES[pooling_type](
+                    kernel_size, downsampling_rate, 1
+                )
+            )
+
+    def forward(self, x: torch.Tensor):
+        return self.conv(x)
+
+    def __repr__(self):
+        return repr(self.conv)
+
+
+## ResNet blocks ##
 class Basic(nn.Module):
     def __init__(self,
         in_channels: int,
@@ -30,17 +81,17 @@ class Basic(nn.Module):
         )
 
         self.residual_connection = (
-            (lambda x: x) if stride == 1 else
-            nn.Conv2d(
-                in_channels, out_channels,
-                1, stride
-            )
+            nn.Identity() if stride == channel_mult == 1 else
+            nn.Conv2d(in_channels, out_channels, 1, stride)
         )
 
     def forward(self, waveforms):
         conv_res = self.conv_block(waveforms)
         skip_res = self.residual_connection(waveforms)
         return self.activation_fn(conv_res + skip_res)
+
+    def __repr__(self):
+        return super().__repr__()
 
 
 class Bottleneck(Basic):
@@ -63,55 +114,3 @@ class Bottleneck(Basic):
             nn.BatchNorm2d(inner_channels), self.activation_fn,
             nn.Conv2d(inner_channels, out_channels, 1)
         )
-
-
-class ResNet(nn.Module):
-    def __init__(self,
-        num_labels: int,
-        in_channels: int,
-        inner_channels: tuple[int],
-        downsampling_rates: tuple[int],
-        num_linear_layers: int = 0,
-        *,
-        kernel_size: int = 3,
-        activation_fn: str | nn.Module = 'relu'
-    ):
-        super().__init__()
-
-        activation_fn = (
-            ACT_FN.get(activation_fn, nn.ReLU)()
-            if isinstance(activation_fn, str) else
-            activation_fn
-        )
-
-        self.model = nn.Sequential()
-        layer_iter = zip(inner_channels, downsampling_rates)
-        for layer, (out_channels, downsampling_rate) in enumerate(layer_iter):
-            self.model.add_module(
-                f'bottleneck_{layer}',
-                Bottleneck(
-                    in_channels, out_channels // in_channels,
-                    kernel_size, stride=downsampling_rate,
-                    activation_fn=activation_fn
-                )
-            )
-            in_channels = out_channels
-
-        self.model.add_module(
-            'global_pooling',
-            nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten())
-        )
-
-        for layer in range(num_linear_layers):
-            self.model.add_module(
-                f"linear_{layer}",
-                nn.Sequential(
-                    nn.Linear(out_channels, out_channels),
-                    activation_fn
-                )
-            )
-
-        self.model.add_module('output_logits', nn.Linear(out_channels, num_labels))
-
-    def forward(self, waveforms):
-        return self.model(waveforms)
