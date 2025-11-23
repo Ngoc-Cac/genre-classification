@@ -1,6 +1,6 @@
 from torch import nn
 
-from .structs import _ACT_FN
+from .structs import ACT_FN
 
 
 class CNNSpec(nn.Module):
@@ -17,7 +17,7 @@ class CNNSpec(nn.Module):
         super().__init__()
 
         activation_fn = (
-            _ACT_FN.get(activation_fn, nn.ReLU)()
+            ACT_FN.get(activation_fn, nn.ReLU)()
             if isinstance(activation_fn, str) else
             activation_fn
         )

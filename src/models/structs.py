@@ -1,6 +1,6 @@
 from torch import nn
 
-_ACT_FN = {
+ACT_FN = {
     'relu': nn.ReLU,
     'elu': nn.ELU,
     'sigmoid': nn.Sigmoid,

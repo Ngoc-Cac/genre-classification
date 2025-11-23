@@ -1,6 +1,6 @@
 from torch import nn
 
-from .structs import _ACT_FN
+from .structs import ACT_FN
 
 
 class Basic(nn.Module):
@@ -16,7 +16,7 @@ class Basic(nn.Module):
         out_channels = in_channels * channel_mult
 
         self.activation_fn = (
-            _ACT_FN.get(activation_fn, nn.ReLU)()
+            ACT_FN.get(activation_fn, nn.ReLU)()
             if isinstance(activation_fn, str) else
             activation_fn
         )
@@ -79,7 +79,7 @@ class ResNet(nn.Module):
         super().__init__()
 
         activation_fn = (
-            _ACT_FN.get(activation_fn, nn.ReLU)()
+            ACT_FN.get(activation_fn, nn.ReLU)()
             if isinstance(activation_fn, str) else
             activation_fn
         )
