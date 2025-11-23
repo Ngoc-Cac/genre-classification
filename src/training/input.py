@@ -3,7 +3,6 @@ import yaml
 
 from .structs import (
     FEATURE_TYPES,
-    MODELS,
     OPTIMIZERS,
     OPTIMIZERS_8BIT,
     WINDOW_FUNCTIONS,
@@ -149,7 +148,7 @@ def validate_inout_args(inout: dict):
         )
 
 def validate_model_architecure(model_args: dict):
-    if model_args['backbone'] not in MODELS:
+    if model_args['backbone'] not in ['cnn', 'resnet']:
         raise ValueError(
             "Backbone of model must be 'cnn' or 'resnet'. "
             f"Found {model_args['backbone']}."

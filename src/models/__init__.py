@@ -1,2 +1,2 @@
-from .cnn import CNNSpec
-from .residual_block import ResNet
+from .core import GenreClassifier
+from .structs import ACT_FN, POOLING_TYPES

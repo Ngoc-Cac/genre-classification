@@ -6,10 +6,9 @@ from torch import optim
 from torch.utils.data import random_split, Subset
 
 from data_utils.dataset import GTZAN
-from models import CNNSpec, ResNet
+from models import GenreClassifier
 from .structs import (
     FEATURE_TYPES,
-    MODELS,
     OPTIMIZERS,
     OPTIMIZERS_8BIT,
     WINDOW_FUNCTIONS,
@@ -58,9 +57,10 @@ def build_model(
     *,
     device: Literal['cuda', 'cpu'] = 'cpu',
     **model_kwargs
-) -> tuple[CNNSpec | ResNet, optim.Optimizer]:
-    model = MODELS[backbone_type](
-        num_labels, 1, **model_kwargs
+) -> tuple[GenreClassifier, optim.Optimizer]:
+    model = GenreClassifier(
+        num_labels, 1, backbone_type=backbone_type,
+        **model_kwargs
     ).to(device)
 
     optimizer = (
