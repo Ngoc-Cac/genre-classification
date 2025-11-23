@@ -6,3 +6,8 @@ ACT_FN = {
     'sigmoid': nn.Sigmoid,
     'tanh': nn.Tanh
 }
+
+POOLING_TYPES = {
+    'max': nn.MaxPool2d,
+    'average': nn.AvgPool2d
+}
