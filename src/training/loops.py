@@ -1,6 +1,6 @@
 import torch
 
-from typing import Callable, Literal
+from typing import Callable, Literal, Any
 
 
 def train_loop(
@@ -12,7 +12,7 @@ def train_loop(
     device: Literal['cpu', 'cuda'],
     *,
     mixed_precision: bool = False,
-    callback_fn: Callable[[int, float]] | None = None
+    callback_fn: Callable[[int, float], Any] | None = None
 ) -> tuple[float, float]:
     if callback_fn is None:
         callback_fn = lambda *args: None
