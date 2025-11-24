@@ -1,12 +1,15 @@
 data_args:
   root: path_to_dataset
-  first_n_secs: 20
-  train_ratio: .8
   seed: 4
+  train_ratio: .8
+  first_n_secs: 20
+  random_crops: 0
+
+feature_args:
   feature_type: midi
+  n_mels: 128
   n_fft: 2048
   window_type: hann
-  n_mels: 128
 
 training_args:
   epochs: 100
@@ -33,15 +36,20 @@ model:
 #################################
 # data_args:
 #   root: path to the data
+#   seed: seed for splitting data
+#   train_ratio: The train-test split ratio
 #   first_n_secs: Whether to use only the first_n_secs of audio.
 #     Sepcify -1 to use all of the audio. You must make sure all audio have
 #     the same amount of samples
-#   train_ratio: The train-test split ratio
-#   seed: seed for splitting data
+#   random_crops: How many random crops to create from one audio file in the dataset.
+#     This acts as an augmentation of the dataset, where each crop is a first_n_secs-
+#     second-long segment of the original audio, starting at a random position.
+#     This will only take effect if first_n_secs != -1.
+# feature_args:
 #   feature_type: Type of feature for spectrogram, choose between chroma, midi and mfcc
+#   n_mels: The number of mel filterbanks. This is only use when feature_type is 'mfcc'
 #   n_fft: The number of samples to perform FFT in STFT
 #   window_type: The type of window used in STFT. Currently, only hann is available
-#   n_mels: The number of mel filterbanks. This is only use when feature_type is 'mfcc'
 # training_args:
 #   epochs: Total number of training epochs
 #   batch_size: self-explanatory

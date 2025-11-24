@@ -15,6 +15,7 @@ def parse_yml_config(filepath: str):
     configs = yaml.safe_load(configs)
 
     validate_data_args(configs['data_args'])
+    validate_feat_args(configs['feature_args'])
     validate_training_args(configs['training_args'])
     validate_inout_args(configs['inout'])
     validate_model_architecure(configs['model'])
@@ -38,31 +39,6 @@ def validate_data_args(data_args: dict):
             'Please check if the given path is correct.'
         )
 
-    if not isinstance(data_args['first_n_secs'], (int, float)):
-        raise TypeError('first_n_secs should be a positive number!')
-    elif data_args['first_n_secs'] <= 0:
-        data_args['first_n_secs'] = -1
-
-    if data_args['feature_type'] not in FEATURE_TYPES:
-        raise ValueError(f'feature_type should be one of: {list(FEATURE_TYPES.keys())}')
-
-    if data_args['feature_type'] == 'mfcc':
-        if not isinstance(data_args['n_mels'], int):
-            raise TypeError('n_mels should be a positive integer!')
-        elif data_args['n_mels'] <= 0:
-            raise ValueError('n_mels should be a positive integer!')
-
-    if not isinstance(data_args['n_fft'], int):
-        raise TypeError('n_fft should be a positive integer!')
-    elif data_args['n_fft'] <= 0:
-        raise ValueError(
-            'Found invalid value for n_fft! '
-            'Please specify as a positive integer.'
-        )
-
-    if data_args['window_type'] not in WINDOW_FUNCTIONS:
-        raise ValueError(f'window_type should be one of : {list(WINDOW_FUNCTIONS.keys())}')
-    
     if not isinstance(data_args['train_ratio'], float):
         raise TypeError('train_ratio should be a float between 0 and 11')
     elif not 0 <= data_args['train_ratio'] <= 1:
@@ -70,6 +46,40 @@ def validate_data_args(data_args: dict):
             'Found invalid value for train_ratio! '
             'Please specify as a number between 0 and 1.'
         )
+
+    if not isinstance(data_args['first_n_secs'], (int, float)):
+        raise TypeError('first_n_secs should be a positive number!')
+    elif data_args['first_n_secs'] <= 0:
+        data_args['first_n_secs'] = -1
+
+    if not isinstance(data_args['random_crops'], int):
+        raise TypeError('random_crops must be a non-negative integer!')
+    elif data_args['random_crops'] < 0:
+        raise ValueError(
+            'Found invalid value for random_crops!'
+            'Please specify as a non-negative integer.'
+        )
+
+def validate_feat_args(feat_args):
+    if feat_args['feature_type'] not in FEATURE_TYPES:
+        raise ValueError(f'feature_type should be one of: {list(FEATURE_TYPES.keys())}')
+
+    if feat_args['feature_type'] == 'mfcc':
+        if not isinstance(feat_args['n_mels'], int):
+            raise TypeError('n_mels should be a positive integer!')
+        elif feat_args['n_mels'] <= 0:
+            raise ValueError('n_mels should be a positive integer!')
+
+    if not isinstance(feat_args['n_fft'], int):
+        raise TypeError('n_fft should be a positive integer!')
+    elif feat_args['n_fft'] <= 0:
+        raise ValueError(
+            'Found invalid value for n_fft! '
+            'Please specify as a positive integer.'
+        )
+
+    if feat_args['window_type'] not in WINDOW_FUNCTIONS:
+        raise ValueError(f'window_type should be one of : {list(WINDOW_FUNCTIONS.keys())}')
 
 def validate_training_args(training_args: dict):
     if not isinstance(training_args['epochs'], int):

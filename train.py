@@ -38,7 +38,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.manual_seed(configs['data_args']['seed'])
 
 # build dataset
-train_set, test_set = build_dataset(configs['data_args'])
+train_set, test_set = build_dataset(configs['data_args'], configs['feature_args'])
 train_loader = DataLoader(train_set, configs['training_args']['batch_size'], drop_last=True)
 test_loader = DataLoader(test_set, configs['training_args']['batch_size'], drop_last=True)
 
@@ -142,7 +142,7 @@ tb_logger.add_hparams(
         'learning_rate': configs['training_args']['learning_rate'],
         'regularization': configs['training_args']['regularization_lambda'],
         'optimizer': configs['training_args']['optimizer'],
-        'feature_type': configs['data_args']['feature_type']
+        'feature_type': configs['feature_args']['feature_type']
     },
     {
         'hparam/train_accuracy': train_acc,
