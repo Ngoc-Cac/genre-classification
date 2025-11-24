@@ -9,6 +9,29 @@ def clip_signal(
     duration: int | float,
     start: int | float | None = None,
 ) -> ArrayLike:
+    r"""
+    Crop the signal starting at the `start`-th second and ending at the
+    `(start + duration)`-second. If `start` is not given, this will randomize
+    a starting position.
+
+    Internally, the cropping begins at the sample that contains the sub-sample
+    start time `start`. Likewise, the croppings spans the samples that contains
+    the sub-sample duration `duration`.
+    .. math:
+        \text{start_idx}=\lfloor s\cdot F\rfloor
+    .. math:
+        \text{n_samples}=\lceil d\cdot F\rceil
+
+    where :math:`s` is the start time `start`, :math:`d` is the duration `duration`
+    and :math:`F` is the sampling rate `sampling_rate`. The cropped signal includes
+    all samples starting at start_idx and ending at
+    :math:`\text{start_idx} + \text{n_samples} - 1`.
+
+    :param ArrayLike signal: The signal to crop.
+    :param int sampling_rate: The sampling rate of the given signal.
+    :param int or float duration: The duration (seconds) of the cropped signal.
+    :param int, float or None: Where (in seconds) to start the cropping. This
+    """
     if not len(signal):
         return signal[:0]
 
