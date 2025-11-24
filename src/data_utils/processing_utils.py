@@ -3,7 +3,7 @@ import random
 from numpy.typing import ArrayLike
 
 
-def clip_signal(
+def crop_signal(
     signal: ArrayLike,
     sampling_rate: int,
     duration: int | float,

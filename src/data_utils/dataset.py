@@ -4,7 +4,7 @@ import torch
 from scipy.io import wavfile
 from torch.utils.data import Dataset
 
-from .processing_utils import clip_signal
+from .processing_utils import crop_signal
 
 from typing import Callable
 
@@ -47,12 +47,12 @@ class GTZAN(Dataset):
             index = file_index * self._rand_crops
             for i in range(index, index + self._rand_crops):
                 self._data_cache[i] = self._preprocessor(
-                    torch.tensor(clip_signal(wave, sr, self._n_secs)), sr
+                    torch.tensor(crop_signal(wave, sr, self._n_secs)), sr
                 )
                 self._label_cache[i] = self._genre_to_id[genre]
         else:
             if self._n_secs > 0:
-                wave = clip_signal(wave, sr, self._n_secs, 0)
+                wave = crop_signal(wave, sr, self._n_secs, 0)
             self._data_cache[index] = self._preprocessor(torch.tensor(wave), sr)
             self._label_cache[index] = self._genre_to_id[genre]
 
