@@ -30,7 +30,8 @@ def clip_signal(
     :param ArrayLike signal: The signal to crop.
     :param int sampling_rate: The sampling rate of the given signal.
     :param int or float duration: The duration (seconds) of the cropped signal.
-    :param int, float or None: Where (in seconds) to start the cropping. This
+    :param int, float or None: Where (in seconds) to start the cropping. If `start=None`,
+    a random starting index will be chosen.
     """
     if not len(signal):
         return signal[:0]
