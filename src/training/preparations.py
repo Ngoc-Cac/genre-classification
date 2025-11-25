@@ -23,29 +23,28 @@ def _normalize_spec(spec):
 
 
 def build_dataset(
-    data_args: dict
+    data_args: dict,
+    feat_args: dict
 ) -> tuple[Subset, Subset]:
     temp_file = f"{data_args['root']}/{os.listdir(data_args['root'])[0]}"
     temp_file = f"{temp_file}/{os.listdir(temp_file)[0]}"
     with wave.open(temp_file) as wave_file:
         sr = wave_file.getframerate()
 
-    kwargs = {"window_fn": WINDOW_FUNCTIONS[data_args['window_type']]}
-    if data_args['feature_type'] == 'mfcc':
-        kwargs['n_mels'] = data_args['n_mels']
+    kwargs = {"window_fn": WINDOW_FUNCTIONS[feat_args['window_type']]}
+    if feat_args['feature_type'] == 'mfcc':
+        kwargs['n_mels'] = feat_args['n_mels']
 
-    spec_builder = FEATURE_TYPES[data_args['feature_type']](
-        sr, data_args['n_fft'], **kwargs
+    spec_builder = FEATURE_TYPES[feat_args['feature_type']](
+        sr, feat_args['n_fft'], **kwargs
     )
     dataset = GTZAN(
-        data_args['root'],
-        data_args['first_n_secs'],
-        preprocessor=lambda wave, sr: _normalize_spec(
+        data_args['root'], data_args['first_n_secs'], data_args['random_crops'],
+        preprocessor=lambda wave, _: _normalize_spec(
             spec_builder(wave / abs(wave).max()).unflatten(0, (1, -1))
         )
     )
-    train_test_ratio = [data_args['train_ratio'], 1 - data_args['train_ratio']]
-    return random_split(dataset, train_test_ratio)
+    return random_split(dataset, [data_args['train_ratio'], 1 - data_args['train_ratio']])
 
 
 def build_model(
