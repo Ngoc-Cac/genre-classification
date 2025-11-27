@@ -96,8 +96,13 @@ class GenreClassifier(nn.Module):
         )
 
     def __repr__(self):
-        return f"""GenerClassifier(
-  (backbone): {repr(self.networks['backbone']).replace('\n', '\n  ')}
-  (global_avg_pooling): {repr(self.networks['global_avg_pooling']).replace('\n', '\n  ')}
-  (classification_head): {repr(self.networks['classification_head']).replace('\n', '\n  ')}
-)"""
+        backbone = repr(self.networks['backbone']).replace('\n', '\n  ')
+        global_avg_pooling = repr(self.networks['global_avg_pooling']).replace('\n', '\n  ')
+        classification_head = repr(self.networks['classification_head']).replace('\n', '\n  ')
+        return (
+            "GenerClassifier(\n"
+            f"  (backbone): {backbone}\n"
+            f"  (global_avg_pooling): {global_avg_pooling}\n"
+            f"  (classification_head): {classification_head}\n"
+            ")"
+        )
