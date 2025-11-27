@@ -3,6 +3,7 @@ sys.path.append('src')
 
 import argparse
 import datetime
+import random
 
 import torch
 import tqdm
@@ -36,6 +37,7 @@ args = parse_args(parser)
 configs = parse_yml_config(args.config_file)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.manual_seed(configs['data_args']['seed'])
+random.seed(configs['data_args']['seed'])
 
 # build dataset
 train_set, test_set = build_dataset(configs['data_args'], configs['feature_args'])
