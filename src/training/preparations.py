@@ -4,7 +4,7 @@ import wave
 import torch
 
 from torch import optim
-from torch.utils.data import random_split, Subset
+from torch.utils.data import Subset
 
 from data_utils.dataset import GTZAN
 from models import GenreClassifier
@@ -32,6 +32,26 @@ def _train_test_split(
     # random_split doesnt actually check if dataset is a Dataset, it just neds a len method
     train_set, test_set = random_split(dataset._files, [train_ratio, 1 - train_ratio])
     train_idx, test_idx = train_set.indices, test_set.indices
+
+    if (mult := dataset._rand_crops) > 1:
+        train_idx = list(itertools.chain(*(
+            [idx * mult + i for i in range(mult)] for idx in train_idx
+        )))
+        test_idx = list(itertools.chain(*(
+            [idx * mult + i for i in range(mult)] for idx in test_idx
+        )))
+    return Subset(dataset, train_idx), Subset(dataset, test_idx)
+
+
+def _train_test_split(
+    dataset: GTZAN,
+    train_ratio: float
+) -> tuple[Subset, Subset]:
+    train_lengths = train_ratio * len(dataset._files)
+    train_lengths = int(train_lengths) + bool(train_lengths % 1)
+
+    indices = torch.randperm(len(dataset._files)).tolist()
+    train_idx, test_idx = indices[:train_lengths], indices[train_lengths:]
 
     if (mult := dataset._rand_crops) > 1:
         train_idx = list(itertools.chain(*(
