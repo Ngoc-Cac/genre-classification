@@ -163,9 +163,12 @@ timestamp = (
     f"{now.hour:0>2}{now.minute:0>2}{now.second:0>2}"
 )
 
-torch.save({
-    'epoch': epoch,
-    'model': model.state_dict(),
-    'optimizer': optimizer.state_dict(),
-    'gradient_scaler': gradient_scaler.state_dict()
-}, f"{configs['inout']['ckpt_dir']}/{timestamp}_cnn.pth")
+torch.save(
+    {
+        'epoch': epoch,
+        'model': model.state_dict(),
+        'optimizer': optimizer.state_dict(),
+        'gradient_scaler': gradient_scaler.state_dict()
+    },
+    f"{configs['inout']['ckpt_dir']}/{timestamp}_{configs['model']['backbone']}.pth"
+)
