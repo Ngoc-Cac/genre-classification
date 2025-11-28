@@ -8,6 +8,7 @@ data_args:
 feature_args:
   feature_type: midi
   n_mels: 128
+  n_mfcc: 20
   n_fft: 2048
   window_type: hann
 
@@ -46,8 +47,10 @@ model:
 #     second-long segment of the original audio, starting at a random position.
 #     This will only take effect if first_n_secs != -1.
 # feature_args:
-#   feature_type: Type of feature for spectrogram, choose between chroma, midi and mfcc
-#   n_mels: The number of mel filterbanks. This is only use when feature_type is 'mfcc'
+#   feature_type: Type of feature for spectrogram, choose between chroma, midi, mel and mfcc
+#   n_mels: The number of mel filterbanks. This is only use when feature_type is 'mel' or 'mfcc'
+#   n_mfcc: The number of mel-frequency cepstrum coefficients. This is only use when feature_type
+#     is 'mfcc'
 #   n_fft: The number of samples to perform FFT in STFT
 #   window_type: The type of window used in STFT. Currently, only hann is available
 # training_args:

@@ -18,9 +18,11 @@ from .structs import (
 from typing import Literal
 
 
-def _normalize_spec(spec):
-    db_spec = torch.log(1 + spec)
-    return (db_spec - db_spec.min()) / (db_spec.max() - db_spec.min())
+def _normalize_spec(spec, is_mfcc=False):
+    # don't convert to log scale if already mfcc
+    if not is_mfcc:
+        spec = torch.log(1 + spec)
+    return (spec - spec.min()) / (spec.max() - spec.min())
 
 
 def _train_test_split(
@@ -45,22 +47,26 @@ def build_dataset(
     data_args: dict,
     feat_args: dict
 ) -> tuple[Subset, Subset]:
-    temp_file = f"{data_args['root']}/{os.listdir(data_args['root'])[0]}"
-    temp_file = f"{temp_file}/{os.listdir(temp_file)[0]}"
-    with wave.open(temp_file) as wave_file:
+    root = f"{data_args['root']}/{os.listdir(data_args['root'])[0]}"
+    with wave.open(f"{root}/{os.listdir(root)[0]}") as wave_file:
         sr = wave_file.getframerate()
 
-    kwargs = {"window_fn": WINDOW_FUNCTIONS[feat_args['window_type']]}
-    if feat_args['feature_type'] == 'mfcc':
+    feat_type = feat_args['feature_type']
+    kwargs = {
+        "n_fft": feat_args['n_fft'],
+        "window_fn": WINDOW_FUNCTIONS[feat_args['window_type']],
+    }
+    if feat_type in ('mel', 'mfcc'):
         kwargs['n_mels'] = feat_args['n_mels']
+    if feat_type == 'mfcc':
+        kwargs = {"melkwargs": kwargs, "n_mfcc": feat_args['n_mfcc']}
 
-    spec_builder = FEATURE_TYPES[feat_args['feature_type']](
-        sr, feat_args['n_fft'], **kwargs
-    )
+    spec_builder = FEATURE_TYPES[feat_type](sr, **kwargs)
     dataset = GTZAN(
         data_args['root'], data_args['first_n_secs'], data_args['random_crops'],
         preprocessor=lambda wave, _: _normalize_spec(
-            spec_builder(wave / abs(wave).max()).unflatten(0, (1, -1))
+            spec_builder(wave / abs(wave).max()).unflatten(0, (1, -1)),
+            feat_type == 'mfcc'
         )
     )
     return _train_test_split(dataset, data_args['train_ratio'])

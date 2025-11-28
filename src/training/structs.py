@@ -5,7 +5,7 @@ try:
 except ModuleNotFoundError:
     bnb = None
 
-from torchaudio.transforms import MelSpectrogram
+from torchaudio.transforms import MelSpectrogram, MFCC
 from spectrograms import (
     Chromagram,
     LogFreqSpectrogram
@@ -15,7 +15,8 @@ from spectrograms import (
 FEATURE_TYPES = {
     'chroma': Chromagram,
     'midi': LogFreqSpectrogram,
-    'mfcc': MelSpectrogram
+    'mel': MelSpectrogram,
+    'mfcc': MFCC
 }
 
 OPTIMIZERS = {
