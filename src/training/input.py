@@ -64,11 +64,16 @@ def validate_feat_args(feat_args):
     if feat_args['feature_type'] not in FEATURE_TYPES:
         raise ValueError(f'feature_type should be one of: {list(FEATURE_TYPES.keys())}')
 
-    if feat_args['feature_type'] == 'mfcc':
+    if feat_args['feature_type'] in ('mel', 'mfcc'):
         if not isinstance(feat_args['n_mels'], int):
             raise TypeError('n_mels should be a positive integer!')
         elif feat_args['n_mels'] <= 0:
             raise ValueError('n_mels should be a positive integer!')
+    if feat_args['feature_type'] == 'mfcc':
+        if not isinstance(feat_args['n_mfcc'], int):
+            raise TypeError('n_mfcc should be a positive integer!')
+        elif feat_args['n_mfcc'] <= 0:
+            raise ValueError('n_mfcc should be a positive integer!')
 
     if not isinstance(feat_args['n_fft'], int):
         raise TypeError('n_fft should be a positive integer!')
