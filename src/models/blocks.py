@@ -21,36 +21,36 @@ class Conv2D(nn.Module):
         kernel_size: int = 3,
         *,
         activation_fn: str | nn.Module = 'relu',
+        batch_norm: bool = True,
         pooling_type: Literal['max', 'average'] = 'average'
     ):
         super().__init__()
 
-        activation_fn = (
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, padding=1)
+        self.bn = nn.BatchNorm2d(out_channels) if batch_norm else nn.Identity()
+        self.act_fn = (
             ACT_FN.get(activation_fn, nn.ReLU)()
-            if isinstance(activation_fn, str) else
-            activation_fn
+            if isinstance(activation_fn, str) else activation_fn
         )
+        self.pool = POOLING_TYPES[pooling_type](
+            kernel_size, downsampling_rate, 1
+        ) if downsampling_rate > 1 else nn.Identity()
 
-        self.conv = nn.Sequential(
-            nn.Conv2d(
-                in_channels, out_channels,
-                kernel_size, padding=1
-            ),
-            nn.BatchNorm2d(out_channels),
-            activation_fn
-        )
+        self._repr = ["Conv2D(", "  (conv): " + repr(self.conv).replace('\n', '\n  ')]
+        if batch_norm:
+            self._repr.append("  (batch_norm): " + repr(self.bn).replace('\n', '\n  '))
+        self._repr.append("  (activation): " + repr(self.act_fn).replace('\n', '\n  '))
         if downsampling_rate > 1:
-            self.conv.append(
-                POOLING_TYPES[pooling_type](
-                    kernel_size, downsampling_rate, 1
-                )
-            )
+            self._repr.append("  (pooling): " + repr(self.pool).replace('\n', '\n  '))
+        self._repr.append(")")
+        self._repr = '\n'.join(self._repr)
 
     def forward(self, x: torch.Tensor):
-        return self.conv(x)
+        # conv -> bn -> act -> pool
+        return self.pool(self.act_fn(self.bn(self.conv(x))))
 
     def __repr__(self):
-        return repr(self.conv)
+        return self._repr
 
 
 ## ResNet blocks ##
