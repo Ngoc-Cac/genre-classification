@@ -4,13 +4,55 @@ from torch import nn
 
 from .structs import ACT_FN, POOLING_TYPES
 
-from typing import Literal
+from typing import Literal, Iterable
 
 __all__ = (
     'Conv2D',
     'Basic',
     'Bottleneck'
 )
+
+
+class MLP(nn.Module):
+    def __init__(self,
+        input_dim: int,
+        output_dim: int,
+        hidden_dims: Iterable[int],
+        drop_out_probs: Iterable[int | float],
+        *,
+        activation_fn: str | nn.Module = 'relu',
+    ):
+        super().__init__()
+
+        act_fn = (
+            ACT_FN.get(activation_fn, nn.ReLU)()
+            if isinstance(activation_fn, str) else activation_fn
+        )
+        self._repr = ["MLP("]
+        self.mlp = nn.Sequential()
+
+        prev_dim = input_dim
+        layers = enumerate(zip(hidden_dims, drop_out_probs, strict=True))
+        for i, (dim, drop_prob) in layers:
+            fc = nn.Sequential(nn.Linear(prev_dim, dim), act_fn)
+            if 0 < drop_prob <= 1:
+                fc.append(nn.Dropout(drop_prob))
+            self.mlp.append(fc)
+            self._repr.append(f"  (fc_{i}): " + repr(fc).replace('\n', '\n  '))
+            prev_dim = dim
+
+        output = nn.Linear(prev_dim, output_dim)
+        self.mlp.append(output)
+
+        self._repr.append("  (output_logits): " + repr(output).replace('\n', '\n  '))
+        self._repr.append(")")
+        self._repr = '\n'.join(self._repr)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.mlp(x)
+
+    def __repr__(self):
+        return self._repr
 
 
 class Conv2D(nn.Module):
