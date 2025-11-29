@@ -23,15 +23,10 @@ training_args:
   mixed_precision: false
 
 inout:
+  model_path: model.yml
   logdir: logs
   ckpt_dir: your_checkpoint_dir
   checkpoint: latest
-
-model:
-  backbone: cnn
-  inner_channels: [64, 64, 64, 128, 128, 128, 256, 256, 256]
-  downsampling_rates: [2, 1, 1, 2, 1, 1, 2, 1, 1]
-  num_linear_layers: 0
 
 ### Description of parameters ###
 #################################
@@ -64,20 +59,8 @@ model:
 #     if multiple GPUs are present.
 #   mixed_precision: Whether or not to run mixed precision training with fp16.
 # inout:
+#   model_path: Path to model building configuration file. See model.yml for an example.
 #   logdir: A directory with this name will be created in ckpt_dir
 #   ckpt_dir: Where the models should be checkpointed
 #   checkpoint: Previous checkpoint of the model. Specify latest to load latest checkpoint
-# model:
-#   backbone: The backbone used for feature extraction, choose between cnn and resnet
-#   inner_channels: The desired channel dimension after each layer in the backbone.
-#     For example, [8, 16, 32] specifies that the feature map produced by the first
-#     layer of the backbone is 8, second layer is 16, etc. 
-#   downsampling_rates: The downsampling rate at each layer in the backbone.
-#     For example, [2, 1, 1] specifies that the feature map produced by the first
-#     layer of the backbone will be downsampled by 2 in its spatial dimension. For
-#     the layers afterward, the spatial dimension of the output feature map stays
-#     constant.
-#   num_linear_layers: The number of hidden linear layers used for classification.
-#     These are the layers that take in the final feature map output by the backbone
-#     before passing it the final output layer for predicting the output logits.
 #################################

@@ -4,13 +4,55 @@ from torch import nn
 
 from .structs import ACT_FN, POOLING_TYPES
 
-from typing import Literal
+from typing import Literal, Iterable
 
 __all__ = (
     'Conv2D',
     'Basic',
     'Bottleneck'
 )
+
+
+class MLP(nn.Module):
+    def __init__(self,
+        input_dim: int,
+        output_dim: int,
+        hidden_dims: Iterable[int],
+        dropout_probs: Iterable[int | float],
+        *,
+        activation_fn: str | nn.Module = 'relu',
+    ):
+        super().__init__()
+
+        act_fn = (
+            ACT_FN.get(activation_fn, nn.ReLU)()
+            if isinstance(activation_fn, str) else activation_fn
+        )
+        self._repr = ["MLP("]
+        self.mlp = nn.Sequential()
+
+        prev_dim = input_dim
+        layers = enumerate(zip(hidden_dims, dropout_probs, strict=True))
+        for i, (dim, drop_prob) in layers:
+            fc = nn.Sequential(nn.Linear(prev_dim, dim), act_fn)
+            if 0 < drop_prob <= 1:
+                fc.append(nn.Dropout(drop_prob))
+            self.mlp.append(fc)
+            self._repr.append(f"  (fc_{i}): " + repr(fc).replace('\n', '\n  '))
+            prev_dim = dim
+
+        output = nn.Linear(prev_dim, output_dim)
+        self.mlp.append(output)
+
+        self._repr.append("  (output_logits): " + repr(output).replace('\n', '\n  '))
+        self._repr.append(")")
+        self._repr = '\n'.join(self._repr)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.mlp(x)
+
+    def __repr__(self):
+        return self._repr
 
 
 class Conv2D(nn.Module):
@@ -21,36 +63,36 @@ class Conv2D(nn.Module):
         kernel_size: int = 3,
         *,
         activation_fn: str | nn.Module = 'relu',
+        batch_norm: bool = True,
         pooling_type: Literal['max', 'average'] = 'average'
     ):
         super().__init__()
 
-        activation_fn = (
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, padding=1)
+        self.bn = nn.BatchNorm2d(out_channels) if batch_norm else nn.Identity()
+        self.act_fn = (
             ACT_FN.get(activation_fn, nn.ReLU)()
-            if isinstance(activation_fn, str) else
-            activation_fn
+            if isinstance(activation_fn, str) else activation_fn
         )
+        self.pool = POOLING_TYPES[pooling_type](
+            kernel_size, downsampling_rate, 1
+        ) if downsampling_rate > 1 else nn.Identity()
 
-        self.conv = nn.Sequential(
-            nn.Conv2d(
-                in_channels, out_channels,
-                kernel_size, padding=1
-            ),
-            nn.BatchNorm2d(out_channels),
-            activation_fn
-        )
+        self._repr = ["Conv2D(", "  (conv): " + repr(self.conv).replace('\n', '\n  ')]
+        if batch_norm:
+            self._repr.append("  (batch_norm): " + repr(self.bn).replace('\n', '\n  '))
+        self._repr.append("  (activation): " + repr(self.act_fn).replace('\n', '\n  '))
         if downsampling_rate > 1:
-            self.conv.append(
-                POOLING_TYPES[pooling_type](
-                    kernel_size, downsampling_rate, 1
-                )
-            )
+            self._repr.append("  (pooling): " + repr(self.pool).replace('\n', '\n  '))
+        self._repr.append(")")
+        self._repr = '\n'.join(self._repr)
 
     def forward(self, x: torch.Tensor):
-        return self.conv(x)
+        # conv -> bn -> act -> pool
+        return self.pool(self.act_fn(self.bn(self.conv(x))))
 
     def __repr__(self):
-        return repr(self.conv)
+        return self._repr
 
 
 ## ResNet blocks ##

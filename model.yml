@@ -1,0 +1,40 @@
+backbone:
+  type: cnn
+  inner_channels: [64, 64, 64, 128, 128, 128, 256, 256, 256]
+  downsampling_rates: [2, 1, 1, 2, 1, 1, 2, 1, 1]
+  kernel_size: 3
+  activation: relu
+
+head:
+  hidden_dims: []
+  dropout_probs: []
+  activation: relu
+
+### Description of parameters ###
+#################################
+# backbone: This network extracts features from input spectrograms.
+#   type: The network type used for feature extraction, choose between cnn and resnet
+#   inner_channels: The desired channel dimension after each layer in the backbone.
+#     For example, [8, 16, 32] specifies that the feature map produced by the first
+#     layer of the backbone is 8, second layer is 16, etc. 
+#   downsampling_rates: The downsampling rate at each layer in the backbone.
+#     For example, [2, 1, 1] specifies that the feature map produced by the first
+#     layer of the backbone will be downsampled by 2 in its spatial dimension. For
+#     the layers afterward, the spatial dimension of the output feature map stays constant.
+#   kernel_size: The kernel size to use for convolutions. If a positive integer is given,
+#     this will be used as the kernel size for all layers. If a list of integers is given,
+#     each layer will use the corresponding kernel size.
+#   activation: The activation function to use for all layers, choose between relu,
+#     elu, sigmoid and tanh.
+# head: This network takes in the extracted feature maps and perform classification.
+#   hidden_dims: The desired dimension of corresponding hidden layers in the clasification
+#     multi-layer perceptron. For example, [8, 16, 32, 32, 32] specifies that the network
+#     has three hidden layers, with 8 hidden units in the first layer, 16 units in the
+#     second, etc.
+#   dropout_probs: The desired dropout probability at each corresponding hidden layers
+#     in the clasification multi-layer perceptron. For example, [0, .2, .2, .2, .2]
+#     specifies that the first hidden layer will have dropout rate of 0% (no dropout),
+#     the second layer has a dropout rate of 20%, etc.
+#   activation: The activation function to use for all layers, choose between relu,
+#     elu, sigmoid and tanh.
+#################################

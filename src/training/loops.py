@@ -32,7 +32,8 @@ def train_loop(
         gradient_scaler.update()
         optimizer.zero_grad()
 
-        train_loss += loss.item()
+        loss = loss.item()
+        train_loss += loss
         train_acc += (labels == preds.argmax(dim=1)).sum().item()
         callback_fn(step, loss)
     return train_loss, train_acc

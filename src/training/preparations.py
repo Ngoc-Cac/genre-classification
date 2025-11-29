@@ -1,10 +1,8 @@
-import os
-import itertools
-import wave
+import os, itertools, wave
 import torch
 
 from torch import optim
-from torch.utils.data import Subset
+from torch.utils.data import random_split, Subset
 
 from data_utils.dataset import GTZAN
 from models import GenreClassifier
@@ -15,7 +13,9 @@ from .structs import (
     WINDOW_FUNCTIONS,
 )
 
-from typing import Literal
+from typing import Literal, TypeAlias
+
+_ALLOWED_OPTS: TypeAlias = Literal[*tuple(OPTIMIZERS.keys())]
 
 
 def _normalize_spec(spec, is_mfcc=False):
@@ -32,26 +32,6 @@ def _train_test_split(
     # random_split doesnt actually check if dataset is a Dataset, it just neds a len method
     train_set, test_set = random_split(dataset._files, [train_ratio, 1 - train_ratio])
     train_idx, test_idx = train_set.indices, test_set.indices
-
-    if (mult := dataset._rand_crops) > 1:
-        train_idx = list(itertools.chain(*(
-            [idx * mult + i for i in range(mult)] for idx in train_idx
-        )))
-        test_idx = list(itertools.chain(*(
-            [idx * mult + i for i in range(mult)] for idx in test_idx
-        )))
-    return Subset(dataset, train_idx), Subset(dataset, test_idx)
-
-
-def _train_test_split(
-    dataset: GTZAN,
-    train_ratio: float
-) -> tuple[Subset, Subset]:
-    train_lengths = train_ratio * len(dataset._files)
-    train_lengths = int(train_lengths) + bool(train_lengths % 1)
-
-    indices = torch.randperm(len(dataset._files)).tolist()
-    train_idx, test_idx = indices[:train_lengths], indices[train_lengths:]
 
     if (mult := dataset._rand_crops) > 1:
         train_idx = list(itertools.chain(*(
@@ -94,21 +74,15 @@ def build_dataset(
 
 def build_model(
     num_labels: int,
-    backbone_type: Literal['cnn', 'resnet'],
+    model_config_file: str,
     learning_rate: int | float,
-    optimizer: Literal['adam', 'adamw', 'sgd'],
+    optimizer: _ALLOWED_OPTS,
     use_8bit_optimizers: bool = False,
     *,
-    device: Literal['cuda', 'cpu'] = 'cpu',
-    **model_kwargs
+    device: Literal['cuda', 'cpu'] = 'cpu'
 ) -> tuple[GenreClassifier, optim.Optimizer]:
-    model = GenreClassifier(
-        num_labels, 1, backbone_type=backbone_type,
-        **model_kwargs
-    ).to(device)
-
+    model = GenreClassifier(1, num_labels, model_config_file).to(device)
     optimizer = (
         OPTIMIZERS_8BIT if use_8bit_optimizers else OPTIMIZERS
     )[optimizer]
-
     return model, optimizer(model.parameters(), learning_rate)

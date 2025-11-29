@@ -1,5 +1,4 @@
-import os
-import yaml
+import os, yaml
 
 from .structs import (
     FEATURE_TYPES,
@@ -11,23 +10,12 @@ from .structs import (
 
 def parse_yml_config(filepath: str):
     with open(filepath) as file:
-        configs = file.read()
-    configs = yaml.safe_load(configs)
+        configs = yaml.safe_load(file)
 
     validate_data_args(configs['data_args'])
     validate_feat_args(configs['feature_args'])
     validate_training_args(configs['training_args'])
     validate_inout_args(configs['inout'])
-    validate_model_architecure(configs['model'])
-
-    configs['model'] = {
-        "backbone": configs['model']['backbone'],
-        "kwargs": {
-            key: value
-            for key, value in configs['model'].items()
-            if key != 'backbone'
-        }
-    }
 
     return configs
 
@@ -147,6 +135,12 @@ def validate_inout_args(inout: dict):
     if not os.path.exists(inout['ckpt_dir']):
         os.makedirs(inout['ckpt_dir'])
 
+    if not os.path.exists(inout['model_path']):
+        raise FileNotFoundError(
+            "Model configuration file does not exist!"
+            "Please check if the given path is correct."
+        )
+
     if inout['checkpoint'] == 'latest':
         ckpts = list(filter(
             lambda path: path[-4:] == '.pth',
@@ -158,46 +152,6 @@ def validate_inout_args(inout: dict):
         not os.path.exists(inout['checkpoint'])
     ):
         raise FileNotFoundError(
-            'checkpoint does not exist! '
+            'Checkpoint does not exist! '
             'Please check if the given path is correct'
-        )
-
-def validate_model_architecure(model_args: dict):
-    if model_args['backbone'] not in ['cnn', 'resnet']:
-        raise ValueError(
-            "Backbone of model must be 'cnn' or 'resnet'. "
-            f"Found {model_args['backbone']}."
-        )
-
-    if not all(isinstance(i, int) for i in model_args['inner_channels']):
-        raise TypeError(
-            "Found incorrect type for inner_channels! "
-            "Inner channels must be a list of positive integers."
-        )
-    elif not all(i > 0 for i in model_args['inner_channels']):
-        raise ValueError(
-            "Found negative number in inner_channels! "
-            "Inner channels must be a list of positive integers."
-        )
-
-    if not all(isinstance(i, int) for i in model_args['downsampling_rates']):
-        raise TypeError(
-            "Found incorrect type for downsampling_rates. "
-            "Inner channels must be a list of positive integers."
-        )
-    elif not all(i > 0 for i in model_args['downsampling_rates']):
-        raise ValueError(
-            "Found negative number in downsampling_rates. "
-            "Inner channels must be a list of positive integers."
-        )
-
-    if not isinstance(model_args['num_linear_layers'], int):
-        raise TypeError(
-            "Found incorrect type for num_linear_layers! "
-            "Please specify as a non-negative integer."
-        )
-    elif model_args['num_linear_layers'] < 0:
-        raise ValueError(
-            "Found negative number for num_linear_layers! "
-            "Please specify as a non-negative integer."
         )
