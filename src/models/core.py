@@ -3,7 +3,7 @@ import torch
 from torch import nn
 
 from .structs import ACT_FN
-from .blocks import Conv2D, Bottleneck
+from .blocks import Bottleneck, Conv2D, MLP
 
 from typing import Literal
 
@@ -34,10 +34,11 @@ class GenreClassifier(nn.Module):
                 backbone_type, kernel_size, activation_fn
             ),
             "global_avg_pooling": nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten()),
-            "classification_head": self._build_classify_head(
-                num_linear_layers, inner_channels[-1],
+            "classification_head": MLP(
                 inner_channels[-1], num_labels,
-                activation_fn
+                [inner_channels[-1]] * num_linear_layers,
+                [0] * num_linear_layers,
+                activation_fn=activation_fn
             )
         })
 
@@ -70,24 +71,6 @@ class GenreClassifier(nn.Module):
             backbone.add_module(block_name, block)
             in_channels = out_channels
         return backbone
-
-    def _build_classify_head(self,
-        num_layers: int,
-        in_channels: int,
-        hidden_channels: int,
-        out_channels: int,
-        activation_fn: nn.Module
-    ):
-        classify_head = nn.Sequential()
-        for layer in range(num_layers):
-            classify_head.add_module(
-                f'fc_{layer}',
-                nn.Sequential(nn.Linear(in_channels, hidden_channels), activation_fn)
-            )
-            in_channels = hidden_channels
-
-        classify_head.add_module('output_logits', nn.Linear(hidden_channels, out_channels))
-        return classify_head
 
     def forward(self, spectrograms: torch.Tensor):
         features = self.networks['backbone'](spectrograms)
