@@ -18,7 +18,7 @@ class MLP(nn.Module):
         input_dim: int,
         output_dim: int,
         hidden_dims: Iterable[int],
-        drop_out_probs: Iterable[int | float],
+        dropout_probs: Iterable[int | float],
         *,
         activation_fn: str | nn.Module = 'relu',
     ):
@@ -32,7 +32,7 @@ class MLP(nn.Module):
         self.mlp = nn.Sequential()
 
         prev_dim = input_dim
-        layers = enumerate(zip(hidden_dims, drop_out_probs, strict=True))
+        layers = enumerate(zip(hidden_dims, dropout_probs, strict=True))
         for i, (dim, drop_prob) in layers:
             fc = nn.Sequential(nn.Linear(prev_dim, dim), act_fn)
             if 0 < drop_prob <= 1:

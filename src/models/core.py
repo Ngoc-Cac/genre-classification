@@ -2,75 +2,22 @@ import torch
 
 from torch import nn
 
-from .structs import ACT_FN
-from .blocks import Bottleneck, Conv2D, MLP
-
-from typing import Literal
+from .utils import parse_model
 
 
 class GenreClassifier(nn.Module):
     def __init__(self,
-        num_labels: int,
-        in_channels: int,
-        inner_channels: tuple[int],
-        downsampling_rates: tuple[int],
-        num_linear_layers: int = 0,
-        *,
-        backbone_type: Literal['cnn', 'resnet'],
-        kernel_size: int = 3,
-        activation_fn: str | nn.Module = 'relu'
+        input_channel: int,
+        num_genres: int,
+        model_conf: str,
     ):
         super().__init__()
-
-        activation_fn = (
-            ACT_FN.get(activation_fn, nn.ReLU)()
-            if isinstance(activation_fn, str) else
-            activation_fn
-        )
-
+        backbone, head = parse_model(model_conf, input_channel, num_genres)
         self.networks = nn.ModuleDict({
-            "backbone": self._build_backbone_net(
-                in_channels, inner_channels, downsampling_rates,
-                backbone_type, kernel_size, activation_fn
-            ),
+            "backbone": backbone,
             "global_avg_pooling": nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten()),
-            "classification_head": MLP(
-                inner_channels[-1], num_labels,
-                [inner_channels[-1]] * num_linear_layers,
-                [0] * num_linear_layers,
-                activation_fn=activation_fn
-            )
+            "classification_head": head
         })
-
-    def _build_backbone_net(self,
-        in_channels: int,
-        inner_channels: tuple[int],
-        downsampling_rates: tuple[int],
-        backbone_type: Literal['cnn', 'resnet'],
-        kernel_size: int,
-        activation_fn: nn.Module,
-    ):
-        backbone = nn.Sequential()
-        layer_iter = zip(inner_channels, downsampling_rates, strict=True)
-        for layer, (out_channels, downsampling_rate) in enumerate(layer_iter):
-            if backbone_type == 'cnn':
-                block_name = f'conv_{layer}'
-                block = Conv2D(
-                    in_channels, out_channels,
-                    downsampling_rate, kernel_size,
-                    activation_fn=activation_fn
-                )
-            elif backbone_type == 'resnet':
-                block_name = f'bottleneck_{layer}'
-                block = Bottleneck(
-                    in_channels, out_channels // in_channels,
-                    kernel_size, stride=downsampling_rate,
-                    activation_fn=activation_fn
-                )
-
-            backbone.add_module(block_name, block)
-            in_channels = out_channels
-        return backbone
 
     def forward(self, spectrograms: torch.Tensor):
         features = self.networks['backbone'](spectrograms)
