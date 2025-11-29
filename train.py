@@ -1,12 +1,9 @@
 import sys
 sys.path.append('src')
 
-import argparse
-import datetime
-import random
+import argparse, datetime, random
 
-import torch
-import tqdm
+import torch, tqdm
 
 from torch.utils.data import (
     DataLoader,
@@ -47,11 +44,11 @@ test_loader = DataLoader(test_set, configs['training_args']['batch_size'], drop_
 # build model
 model, optimizer = build_model(
     len(train_set.dataset._genre_to_id),
-    configs['model']['backbone'],
+    configs['inout']['model_path'],
     configs['training_args']['learning_rate'],
     configs['training_args']['optimizer'],
     configs['training_args']['use_8bit_optimizer'],
-    device=device, **configs['model']['kwargs']
+    device=device,
 )
 
 gradient_scaler = torch.amp.grad_scaler.GradScaler(enabled=configs['training_args']['mixed_precision'])
@@ -79,15 +76,13 @@ loss_fn = lambda y_hat, y: (
 # run training
 def log_train_step(step, loss):
     global pbar, tb_logger, epoch, train_loader, prev_loss
-    pbar.set_postfix({'loss': loss.item(), 'test_loss': prev_loss})
-    tb_logger.add_scalar(
-        'step/train_loss',
-        loss, (epoch - 1) * len(train_loader) + step
-    )
+    pbar.set_postfix({'loss': loss, 'test_loss': prev_loss})
+    step = (epoch - 1) * len(train_loader) + step
+    tb_logger.add_scalar('step/train_loss', loss, step)
     tb_logger.add_scalar(
         'step/learning_rate',
         configs['training_args']['learning_rate'],
-        (epoch - 1) * len(train_loader) + step
+        step
     )
 
 tb_logger = SummaryWriter(
@@ -96,8 +91,7 @@ tb_logger = SummaryWriter(
 pbar = tqdm.tqdm(
     (
         range(1 + ckpt['epoch'], configs['training_args']['epochs'] + ckpt['epoch'] + 1)
-        if configs['inout']['checkpoint'] else
-        range(1, configs['training_args']['epochs'] + 1)
+        if configs['inout']['checkpoint'] else range(1, configs['training_args']['epochs'] + 1)
     ),
     desc='Epoch'
 )
@@ -111,30 +105,22 @@ for epoch in pbar:
         mixed_precision=mixed_prec,
         callback_fn=log_train_step
     )
-
     model.eval()
     test_loss, test_acc = eval_loop(
         model, test_loader, loss_fn, device=device,
         mixed_precision=mixed_prec
     )
 
+    train_loss = train_loss / len(train_loader)
     prev_loss = test_loss = test_loss / len(test_loader)
+    train_acc = train_acc / len(train_set)
+    test_acc = test_acc / len(test_set)
 
     tb_logger.add_scalars(
-        'epoch/loss',
-        {
-            'train': train_loss / len(train_loader),
-            'test': test_loss,
-        },
-        epoch
+        'epoch/loss', {'train': train_loss, 'test': test_loss}, epoch
     )
     tb_logger.add_scalars(
-        'epoch/accuracy',
-        {
-            'train': train_acc / len(train_set),
-            'test': test_acc / len(test_set),
-        },
-        epoch
+        'epoch/accuracy', {'train': train_acc, 'test': test_acc}, epoch
     )
     tb_logger.flush()
 
@@ -170,5 +156,5 @@ torch.save(
         'optimizer': optimizer.state_dict(),
         'gradient_scaler': gradient_scaler.state_dict()
     },
-    f"{configs['inout']['ckpt_dir']}/{timestamp}_{configs['model']['backbone']}.pth"
+    f"{configs['inout']['ckpt_dir']}/{timestamp}.pth"
 )
