@@ -45,9 +45,7 @@ test_loader = DataLoader(test_set, configs['training_args']['batch_size'], drop_
 model, optimizer = build_model(
     len(train_set.dataset._genre_to_id),
     configs['inout']['model_path'],
-    configs['training_args']['learning_rate'],
     configs['training_args']['optimizer'],
-    configs['training_args']['use_8bit_optimizer'],
     device=device,
 )
 
@@ -74,14 +72,15 @@ loss_fn = lambda y_hat, y: (
 
 
 # run training
+learning_rate = configs['training_args']['optimizer']['kwargs']['lr']
 def log_train_step(step, loss):
-    global pbar, tb_logger, epoch, train_loader, prev_loss
+    global pbar, tb_logger, epoch, train_loader, prev_loss, learning_rate
     pbar.set_postfix({'loss': loss, 'test_loss': prev_loss})
     step = (epoch - 1) * len(train_loader) + step
     tb_logger.add_scalar('step/train_loss', loss, step)
     tb_logger.add_scalar(
         'step/learning_rate',
-        configs['training_args']['learning_rate'],
+        learning_rate,
         step
     )
 
@@ -127,9 +126,9 @@ for epoch in pbar:
 tb_logger.add_hparams(
     {
         'batch_size': configs['training_args']['batch_size'],
-        'learning_rate': configs['training_args']['learning_rate'],
+        'learning_rate': learning_rate,
         'regularization': configs['training_args']['regularization_lambda'],
-        'optimizer': configs['training_args']['optimizer'],
+        'optimizer': configs['training_args']['optimizer']['type'],
         'feature_type': configs['feature_args']['feature_type']
     },
     {
