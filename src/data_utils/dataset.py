@@ -42,6 +42,21 @@ class _MGRDataset(Dataset):
     def id_to_genre(self):
         return {i: genre for genre, i in self._genre_to_id.values()}
 
+    def random_split(self, ratios: float) -> tuple[Subset, Subset]:
+        # random_split doesnt actually check if dataset is a Dataset,
+        # it just needs an object with len method
+        splits = [split.indices for split in random_split(self._audios, ratios)]
+
+        if self._rand_crops > 1:
+            splits = [
+                [
+                    idx * self._rand_crops + i
+                    for idx in split for i in range(self._rand_crops)
+                ]
+                for split in splits
+            ]
+        return [Subset(self, indices) for indices in splits]
+
     def _build_cache(self, index: int):
         file_index = index // self._rand_crops if self._rand_crops else index
         file, genre = self._audios[file_index]
