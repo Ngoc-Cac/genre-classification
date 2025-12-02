@@ -1,7 +1,7 @@
 import os
 import torch
+import librosa
 
-from scipy.io import wavfile
 from torch.utils.data import Dataset
 
 from .processing_utils import crop_signal
@@ -16,12 +16,14 @@ class GTZAN(Dataset):
         n_seconds: float = -1,
         random_crops: int = 0,
         *,
+        sampling_rate: int | None = None,
         preprocessor: Callable[[torch.Tensor, int], torch.Tensor] | None = None
     ):
         super().__init__()
 
         self._n_secs = n_seconds
         self._rand_crops = int(random_crops)
+        self._sr = sampling_rate
 
         self._genre_to_id = {genre: i for i, genre in enumerate(os.listdir(root))}
         self._files = [
@@ -41,7 +43,7 @@ class GTZAN(Dataset):
     def _build_cache(self, index: int):
         file_index = index // self._rand_crops if self._rand_crops else index
         file, genre = self._files[file_index]
-        sr, wave = wavfile.read(file)
+        wave, sr = librosa.load(file, mono=True, sr=self._sr)
 
         if self._rand_crops and self._n_secs > 0:
             index = file_index * self._rand_crops
