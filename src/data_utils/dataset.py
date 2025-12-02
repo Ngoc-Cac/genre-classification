@@ -1,19 +1,22 @@
 import os
+import itertools
+
 import torch
 import librosa
 import pandas as pd
 
-from torch.utils.data import Dataset
+from torch.utils.data import random_split, Dataset, Subset
 
 from .processing_utils import crop_signal
 
-from typing import Callable
+from typing import Callable, Iterable
 
 
-class GTZAN(Dataset):
+class _MGRDataset(Dataset):
     def __init__(
         self,
-        root: str,
+        audio_files: Iterable[str],
+        genres: Iterable[str],
         n_seconds: float = -1,
         random_crops: int = 0,
         *,
@@ -26,12 +29,10 @@ class GTZAN(Dataset):
         self._rand_crops = int(random_crops)
         self._sr = sampling_rate
 
-        self._genre_to_id = {genre: i for i, genre in enumerate(os.listdir(root))}
-        self._files = [
-            (f"{root}/{genre}/{file}", genre)
-            for genre in os.listdir(root) for file in os.listdir(f"{root}/{genre}")
-        ]
-        self._size = len(self._files) * (self._rand_crops if self._rand_crops else 1)
+        genres = list(genres)
+        self._genre_to_id = {genre: i for i, genre in enumerate(set(genres))}
+        self._audios = zip(audio_files, genres, strict=True)
+        self._size = len(self._audios) * (self._rand_crops if self._rand_crops else 1)
 
         self._preprocessor = (lambda wf, _: wf) if preprocessor is None else preprocessor
         self._data_cache = [None] * self._size
@@ -43,7 +44,7 @@ class GTZAN(Dataset):
 
     def _build_cache(self, index: int):
         file_index = index // self._rand_crops if self._rand_crops else index
-        file, genre = self._files[file_index]
+        file, genre = self._audios[file_index]
         wave, sr = librosa.load(file, mono=True, sr=self._sr)
 
         if self._rand_crops and self._n_secs > 0:
@@ -73,7 +74,30 @@ class GTZAN(Dataset):
         return self._data_cache[index], self._label_cache[index]
 
 
-class FMA(Dataset):
+class GTZAN(_MGRDataset):
+    def __init__(
+        self,
+        root: str,
+        n_seconds: float = -1,
+        random_crops: int = 0,
+        *,
+        sampling_rate: int | None = None,
+        preprocessor: Callable[[torch.Tensor, int], torch.Tensor] | None = None
+    ):
+        file_iter, genre_iter = itertools.tee(
+            f"{root}/{genre}/{file}"
+            for genre in os.listdir(root) for file in os.listdir(f"{root}/{genre}")
+        )
+        super().__init__(
+            [file for file, _ in file_iter],
+            [genre for _, genre in genre_iter],
+            n_seconds, random_crops,
+            sampling_rate=sampling_rate,
+            preprocessor=preprocessor
+        )
+
+
+class FMA(_MGRDataset):
     def __init__(self,
         meta_root: str,
         audio_root: str,
@@ -84,61 +108,16 @@ class FMA(Dataset):
         sampling_rate: int | None = None,
         preprocessor: Callable[[torch.Tensor, int], torch.Tensor] | None = None
     ):
-        super().__init__()
-
-        self._n_secs = n_seconds
-        self._rand_crops = int(random_crops)
-        self._sr = sampling_rate
-
-        self._audio_root = audio_root
-        self._metadata = pd.read_csv(
-            f"{meta_root}/tracks.csv", index_col=0, header=[0, 1]
+        metadata = pd.read_csv(f"{meta_root}/tracks.csv", index_col=0, header=[0, 1])
+        metadata = metadata[metadata['set', 'subset'] == subset]
+        track_ids = [f"{track_id:0>6}" for track_id in metadata.index]
+        super().__init__(
+            [
+                f"{audio_root}/{track_id[:3]}/{track_id}.mp3"
+                for track_id in track_ids
+            ],
+            metadata['track', 'genre_top'].tolist(),
+            n_seconds, random_crops,
+            sampling_rate=sampling_rate,
+            preprocessor=preprocessor
         )
-        self._metadata = self._metadata[self._metadata['set', 'subset'] == subset]
-
-        self._size = len(self._metadata) * (self._rand_crops if self._rand_crops else 1)
-        self._genre_to_id = {
-            genre: i for i, genre in enumerate(
-                self._metadata['track', 'genre_top'].unique()
-            )
-        }
-
-        self._preprocessor = (lambda wf, _: wf) if preprocessor is None else preprocessor
-        self._data_cache = [None] * self._size
-        self._label_cache = [None] * self._size
-
-    def _build_cache(self, index: int):
-        file_index = index // self._rand_crops if self._rand_crops else index
-        row = self._metadata.iloc[file_index]
-
-        track_id, genre = f"{row.name:0>6}", row['track', 'genre_top']
-        wave, sr = librosa.load(
-            f"{self._audio_root}/{track_id[:3]}/{track_id}.mp3",
-            mono=True, sr=self._sr
-        )
-
-        if self._rand_crops and self._n_secs > 0:
-            index = file_index * self._rand_crops
-            for i in range(index, index + self._rand_crops):
-                self._data_cache[i] = self._preprocessor(
-                    torch.tensor(crop_signal(wave, sr, self._n_secs)), sr
-                )
-                self._label_cache[i] = self._genre_to_id[genre]
-        else:
-            if self._n_secs > 0:
-                wave = crop_signal(wave, sr, self._n_secs, 0)
-            self._data_cache[index] = self._preprocessor(torch.tensor(wave), sr)
-            self._label_cache[index] = self._genre_to_id[genre]
-
-    def __len__(self) -> int:
-        return self._size
-
-    def __getitem__(self, index) -> tuple[torch.Tensor, int]:
-        if isinstance(index, tuple):
-            for idx in range(*index):
-                if self._data_cache[idx] is None:
-                    self._build_cache(idx)
-        elif isinstance(index, int) and self._data_cache[index] is None:
-                self._build_cache(index)
-
-        return self._data_cache[index], self._label_cache[index]
