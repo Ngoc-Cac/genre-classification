@@ -125,14 +125,49 @@ class FMA(_MGRDataset):
     ):
         metadata = pd.read_csv(f"{meta_root}/tracks.csv", index_col=0, header=[0, 1])
         metadata = metadata[metadata['set', 'subset'] == subset]
-        track_ids = [f"{track_id:0>6}" for track_id in metadata.index]
+        train_data = metadata[metadata['set', 'split'] != 'test']
+        test_data = metadata[metadata['set', 'split'] == 'test']
+
+        track_ids = [f"{track_id:0>6}" for track_id in train_data.index]
         super().__init__(
-            [
-                f"{audio_root}/{track_id[:3]}/{track_id}.mp3"
-                for track_id in track_ids
-            ],
-            metadata['track', 'genre_top'].tolist(),
+            [f"{audio_root}/{id[:3]}/{id}.mp3" for id in track_ids],
+            train_data['track', 'genre_top'].tolist(),
             n_seconds, random_crops,
             sampling_rate=sampling_rate,
             preprocessor=preprocessor
         )
+
+        track_ids = [f"{track_id:0>6}" for track_id in test_data.index]
+        self._test_set = _MGRDataset(
+            [f"{audio_root}/{id[:3]}/{id}.mp3" for id in track_ids],
+            test_data['track', 'genre_top'].tolist(),
+            n_seconds, 0,
+            sampling_rate=sampling_rate,
+            preprocessor=preprocessor
+        )
+
+        train_data.reset_index(inplace=True)
+        splits = {
+            'train': train_data[
+                train_data['set', 'split'] == 'training'
+            ].index.tolist(),
+            'val': train_data[
+                train_data['set', 'split'] == 'validation'
+            ].index.tolist()
+        }
+        if self._rand_crops > 1:
+            splits = {
+                split: [
+                    idx * self._rand_crops + i
+                    for idx in indices for i in range(self._rand_crops)
+                ]
+                for split, indices in splits.items()
+            }
+        self._splits = {
+            split: Subset(self, indices) for split, indices in splits.items()
+        }
+
+    def random_split(self, ratios: list[float] | None = None):
+        if ratios is None:
+            return tuple(self._splits.values())
+        return super().random_split(ratios)
