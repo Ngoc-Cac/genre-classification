@@ -125,21 +125,21 @@ class FMA(_MGRDataset):
     ):
         metadata = pd.read_csv(f"{meta_root}/tracks.csv", index_col=0, header=[0, 1])
         metadata = metadata[metadata['set', 'subset'] == subset]
-        train_data = metadata[metadata['set', 'split'] != 'test']
-        test_data = metadata[metadata['set', 'split'] == 'test']
+        test_data = metadata['set', 'split'] == 'test'
+        train_data, test_data = metadata[~test_data], metadata[test_data]
 
-        track_ids = [f"{track_id:0>6}" for track_id in train_data.index]
+        track_ids = (f"{track_id:0>6}" for track_id in train_data.index)
         super().__init__(
-            [f"{audio_root}/{id[:3]}/{id}.mp3" for id in track_ids],
+            (f"{audio_root}/{id[:3]}/{id}.mp3" for id in track_ids),
             train_data['track', 'genre_top'].tolist(),
             n_seconds, random_crops,
             sampling_rate=sampling_rate,
             preprocessor=preprocessor
         )
 
-        track_ids = [f"{track_id:0>6}" for track_id in test_data.index]
+        track_ids = (f"{track_id:0>6}" for track_id in test_data.index)
         self._test_set = _MGRDataset(
-            [f"{audio_root}/{id[:3]}/{id}.mp3" for id in track_ids],
+            (f"{audio_root}/{id[:3]}/{id}.mp3" for id in track_ids),
             test_data['track', 'genre_top'].tolist(),
             n_seconds, 0,
             sampling_rate=sampling_rate,
@@ -148,12 +148,8 @@ class FMA(_MGRDataset):
 
         train_data.reset_index(inplace=True)
         splits = {
-            'train': train_data[
-                train_data['set', 'split'] == 'training'
-            ].index.tolist(),
-            'val': train_data[
-                train_data['set', 'split'] == 'validation'
-            ].index.tolist()
+            split: train_data[train_data['set', 'split'] == split].index.tolist()
+            for split in ['training', 'validation']
         }
         if self._rand_crops > 1:
             splits = {
