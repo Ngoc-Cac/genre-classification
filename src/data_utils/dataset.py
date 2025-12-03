@@ -31,7 +31,7 @@ class _MGRDataset(Dataset):
 
         genres = list(genres)
         self._genre_to_id = {genre: i for i, genre in enumerate(set(genres))}
-        self._audios = zip(audio_files, genres, strict=True)
+        self._audios = tuple(zip(audio_files, genres, strict=True))
         self._size = len(self._audios) * (self._rand_crops if self._rand_crops else 1)
 
         self._preprocessor = (lambda wf, _: wf) if preprocessor is None else preprocessor
@@ -42,7 +42,7 @@ class _MGRDataset(Dataset):
     def id_to_genre(self):
         return {i: genre for genre, i in self._genre_to_id.values()}
 
-    def random_split(self, ratios: float) -> tuple[Subset, Subset]:
+    def random_split(self, ratios: list[float]) -> tuple[Subset, Subset]:
         # random_split doesnt actually check if dataset is a Dataset,
         # it just needs an object with len method
         splits = [split.indices for split in random_split(self._audios, ratios)]
@@ -100,7 +100,7 @@ class GTZAN(_MGRDataset):
         preprocessor: Callable[[torch.Tensor, int], torch.Tensor] | None = None
     ):
         file_iter, genre_iter = itertools.tee(
-            f"{root}/{genre}/{file}"
+            (f"{root}/{genre}/{file}", genre)
             for genre in os.listdir(root) for file in os.listdir(f"{root}/{genre}")
         )
         super().__init__(
