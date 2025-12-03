@@ -1,8 +1,8 @@
-import os, itertools, wave
-import torch
+import os, wave
 
 from torch import optim
-from torch.utils.data import random_split, Subset
+from torch.utils.data import Subset
+from torchaudio.transforms import AmplitudeToDB
 
 from data_utils.dataset import GTZAN
 from models import GenreClassifier
@@ -16,31 +16,6 @@ from .structs import (
 from typing import Literal, TypeAlias
 
 _ALLOWED_OPTS: TypeAlias = Literal[*tuple(OPTIMIZERS.keys())]
-
-
-def _normalize_spec(spec, is_mfcc=False):
-    # don't convert to log scale if already mfcc
-    if not is_mfcc:
-        spec = torch.log(1 + spec)
-    return (spec - spec.min()) / (spec.max() - spec.min())
-
-
-def _train_test_split(
-    dataset: GTZAN,
-    train_ratio: float
-) -> tuple[Subset, Subset]:
-    # random_split doesnt actually check if dataset is a Dataset, it just neds a len method
-    train_set, test_set = random_split(dataset._files, [train_ratio, 1 - train_ratio])
-    train_idx, test_idx = train_set.indices, test_set.indices
-
-    if (mult := dataset._rand_crops) > 1:
-        train_idx = list(itertools.chain(*(
-            [idx * mult + i for i in range(mult)] for idx in train_idx
-        )))
-        test_idx = list(itertools.chain(*(
-            [idx * mult + i for i in range(mult)] for idx in test_idx
-        )))
-    return Subset(dataset, train_idx), Subset(dataset, test_idx)
 
 
 def build_dataset(
@@ -62,14 +37,19 @@ def build_dataset(
         kwargs = {"melkwargs": kwargs, "n_mfcc": feat_args['n_mfcc']}
 
     spec_builder = FEATURE_TYPES[feat_type](sr, **kwargs)
+    amp_to_db = AmplitudeToDB(top_db=80)
+    def build_feat(wave, _):
+        # don't convert to log scale if already mfcc
+        spec = spec_builder(wave).unflatten(0, (1, -1))
+        if feat_type != 'mfcc':
+            spec = amp_to_db(spec)
+        return (spec - spec.min()) / (spec.max() - spec.min())
+
     dataset = GTZAN(
         data_args['root'], data_args['first_n_secs'], data_args['random_crops'],
-        preprocessor=lambda wave, _: _normalize_spec(
-            spec_builder(wave / abs(wave).max()).unflatten(0, (1, -1)),
-            feat_type == 'mfcc'
-        )
+        preprocessor=build_feat
     )
-    return _train_test_split(dataset, data_args['train_ratio'])
+    return dataset.random_split([data_args['train_ratio'], 1 - data_args['train_ratio']])
 
 
 def build_model(
