@@ -1,7 +1,7 @@
 import sys
 sys.path.append('src')
 
-import argparse, datetime, random
+import argparse, datetime, random, warnings
 
 import torch, tqdm
 
@@ -37,9 +37,10 @@ torch.manual_seed(configs['data_args']['seed'])
 random.seed(configs['data_args']['seed'])
 
 # build dataset
+batch_size = configs['training_args']['batch_size']
 train_set, test_set = build_dataset(configs['data_args'], configs['feature_args'])
-train_loader = DataLoader(train_set, configs['training_args']['batch_size'], drop_last=True)
-test_loader = DataLoader(test_set, configs['training_args']['batch_size'], drop_last=True)
+train_loader = DataLoader(train_set, batch_size, drop_last=True)
+test_loader = DataLoader(test_set, batch_size, drop_last=True)
 
 # build model
 model, optimizer = build_model(
@@ -54,21 +55,19 @@ gradient_scaler = torch.amp.grad_scaler.GradScaler(enabled=configs['training_arg
 if configs['training_args']['distributed_training']:
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
+    else:
+        warnings.warn(
+            "distributed_training=true but only one GPU found! "
+            "Running on single GPU instead...",
+            RuntimeWarning
+        )
 if configs['inout']['checkpoint']:
     ckpt = torch.load(configs['inout']['checkpoint'], weights_only=True)
     model.load_state_dict(ckpt['model'])
     optimizer.load_state_dict(ckpt['optimizer'])
     gradient_scaler.load_state_dict(ckpt['gradient_scaler'])
 
-cpe_loss = torch.nn.CrossEntropyLoss()
-loss_fn = lambda y_hat, y: (
-    cpe_loss(y_hat, y) +
-    configs['training_args']['regularization_lambda'] / 2
-        * sum(
-            (w ** 2).sum() for name, w in model.named_parameters()
-            if name.endswith('weight')
-        )
-)
+loss_fn = torch.nn.CrossEntropyLoss()
 
 
 # run training
@@ -125,9 +124,8 @@ for epoch in pbar:
 
 tb_logger.add_hparams(
     {
-        'batch_size': configs['training_args']['batch_size'],
+        'batch_size': batch_size,
         'learning_rate': learning_rate,
-        'regularization': configs['training_args']['regularization_lambda'],
         'optimizer': configs['training_args']['optimizer']['type'],
         'feature_type': configs['feature_args']['feature_type']
     },

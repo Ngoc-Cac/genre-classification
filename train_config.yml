@@ -18,7 +18,6 @@ training_args:
   mixed_precision: false
   epochs: 100
   batch_size: 32
-  regularization_lambda: 0
   optimizer:
     type: adamw
     use_8bit_optimizer: false
@@ -56,7 +55,6 @@ inout:
 # training_args:
 #   epochs: Total number of training epochs
 #   batch_size: self-explanatory
-#   regularization_lambda: The lambda for L2 regularization, leave 0 for no regularization
 #   distributed_training: Whether or not to run distributed training. Only available
 #     if multiple GPUs are present.
 #   mixed_precision: Whether or not to run mixed precision training with fp16.
