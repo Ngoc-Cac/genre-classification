@@ -91,14 +91,6 @@ def validate_training_args(training_args: dict):
             'Please specify as a positive integer.'
         )
 
-    if not isinstance(training_args['learning_rate'], (int, float)):
-        raise TypeError('learning_rate should be a positive number!')
-    elif training_args['learning_rate'] <= 0:
-        raise ValueError(
-            'Found invalid value for learning_rate! '
-            'Please specify as a positive number.'
-        )
-
     if not isinstance(training_args['regularization_lambda'], (int, float)):
         raise TypeError('Regularization parameter should be a positive number')
     elif training_args['regularization_lambda'] < 0:
@@ -106,18 +98,6 @@ def validate_training_args(training_args: dict):
             'Found invalid value for regularization parameter! '
             'Please specify as a positive number'
         )
-
-    if training_args['use_8bit_optimizer']:
-        if OPTIMIZERS_8BIT is None:
-            raise ModuleNotFoundError(
-                'Cannot find bitsandbytes! Make sure bitsandbytes is '
-                'installed in order to use 8bit-optimization.'
-            )
-        avail_opts = OPTIMIZERS_8BIT
-    else:
-        avail_opts = OPTIMIZERS
-    if training_args['optimizer'] not in avail_opts:
-        raise ValueError(f'optimizer should be one of: {list(avail_opts.keys())}')
 
     if not isinstance(training_args['distributed_training'], bool):
         raise TypeError(
@@ -129,6 +109,31 @@ def validate_training_args(training_args: dict):
         raise TypeError(
             'Found invalid type for mixed_precision parameter! '
             'Please specify as either true or false'
+        )
+
+    opt_args = training_args['optimizer']
+    if opt_args['use_8bit_optimizer']:
+        if OPTIMIZERS_8BIT is None:
+            raise ModuleNotFoundError(
+                'Cannot find bitsandbytes! Make sure bitsandbytes is '
+                'installed in order to use 8bit-optimization.'
+            )
+        avail_opts = OPTIMIZERS_8BIT
+    else:
+        avail_opts = OPTIMIZERS
+    if opt_args['type'] not in avail_opts:
+        raise ValueError(f'optimizer should be one of: {list(avail_opts.keys())}')
+
+    if opt_args['kwargs'].get('lr') is None:
+        raise KeyError(
+            'Missing required argument "lr" for optimizer!'
+        )
+    elif not isinstance(opt_args['kwargs']['lr'], (int, float)):
+        raise TypeError('learning_rate should be a positive number!')
+    elif opt_args['kwargs']['lr'] <= 0:
+        raise ValueError(
+            'Found invalid value for learning_rate! '
+            'Please specify as a positive number.'
         )
 
 def validate_inout_args(inout: dict):

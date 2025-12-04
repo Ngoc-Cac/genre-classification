@@ -55,14 +55,12 @@ def build_dataset(
 def build_model(
     num_labels: int,
     model_config_file: str,
-    learning_rate: int | float,
-    optimizer: _ALLOWED_OPTS,
-    use_8bit_optimizers: bool = False,
+    optimizer_args: dict,
     *,
     device: Literal['cuda', 'cpu'] = 'cpu'
 ) -> tuple[GenreClassifier, optim.Optimizer]:
     model = GenreClassifier(1, num_labels, model_config_file).to(device)
     optimizer = (
-        OPTIMIZERS_8BIT if use_8bit_optimizers else OPTIMIZERS
-    )[optimizer]
-    return model, optimizer(model.parameters(), learning_rate)
+        OPTIMIZERS_8BIT if optimizer_args['use_8bit_optimizer'] else OPTIMIZERS
+    )[optimizer_args['type']]
+    return model, optimizer(model.parameters(), **optimizer_args['kwargs'])
