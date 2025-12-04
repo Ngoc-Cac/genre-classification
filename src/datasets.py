@@ -7,7 +7,7 @@ import pandas as pd
 
 from torch.utils.data import random_split, Dataset, Subset
 
-from .processing_utils import crop_signal
+from data_utils.processing_utils import crop_signal
 
 from typing import Callable, Iterable
 
