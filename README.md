@@ -23,14 +23,16 @@ The project has currently implemented four different spectrogram features:
     [here](https://en.wikipedia.org/wiki/Mel-frequency_cepstrum).
 
 # The Training Script
-There is a training script available at [`train.py`](./train.py), which encapsulates the data loading, feature extraction, model building, training and validation.
+There is a training script available at [`train.py`](./train.py), which encapsulates
+the data loading, feature extraction, model building, training and validation.
 
 To use the train script, install the necessary requirements:
 1. Python 3.13+
 2. `pip install -r requirements.txt`
 3. Appropriate installation of PyTorch with CUDA, see [here](https://pytorch.org/get-started/locally/).
 
-Then, specify your training configuration in [`train_config.yml`](./train_config.yml). Finally, run training with:
+Then, specify your training configuration in [`train_config.yml`](./train_config.yml).
+Finally, run training with:
 ```bash
 python train.py
 ```
@@ -41,13 +43,27 @@ python train.py -cf path_to_file
 ```
 
 ## About The Dataset
-This project currently uses the [GTZAN dataset](https://www.researchgate.net/publication/3333877_Musical_Genre_Classification_of_Audio_Signals). You can unzip the dataset by running the following command:
+This project currently uses two datasets:
+- The [GTZAN dataset](https://www.researchgate.net/publication/3333877_Musical_Genre_Classification_of_Audio_Signals).
+    You can unzip the dataset by running the following command:
 ```bash
 unzip assets/gtzan.zip -d assets
 ```
+- The [FMA dataset](https://arxiv.org/abs/1612.01840).
+    To download this dataset, please navigate to this
+    [repository](https://github.com/mdeff/fma) and follow their instructions.
+    Note that the `fma_metadata.zip` MUST be downloaded as well, apart from the
+    audio files.
 
-This will unzip the GTZAN dataset into assets. You can then specify `assets/gtzan` as the root path in `train_config.yml`.
+After unzipping the dataset, specify them correspondingly in the `train_config.yml`.
+For `fma`, you must specify the root as two paths: the path to the metadata directory
+and the path to the audio directory.
 
-However, you may also use your own dataset, in which case, just specify the root path in `train_config.yml`. **You must ensure that all audio files in your dataset can be read by** `scipy.io.wavfile.read`**. You must also ensure that all audio files have the same sampling rate.**
+However, you may also use your own dataset, in which case, just specify the root
+path in `train_config.yml`. **You must ensure that all audio files in your dataset**
+**can be read by** `librosa.load`**. You must also ensure that all audio files have**
+**the same sampling rate.**
 
-The project currently does not handle sampling rate normalization so differing sampling rates in the audio files may result in incorrect frequency binning and spectrogram representation.
+The project currently does not handle sampling rate normalization so differing
+sampling rates in the audio files may result in incorrect frequency binning and
+spectrogram representation.

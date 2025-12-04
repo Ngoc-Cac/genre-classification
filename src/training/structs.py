@@ -8,10 +8,7 @@ except ModuleNotFoundError:
 from torchaudio.transforms import MelSpectrogram, MFCC
 
 from datasets import FMA, GTZAN
-from spectrograms import (
-    Chromagram,
-    LogFreqSpectrogram
-)
+from spectrograms import Chromagram, LogFreqSpectrogram
 
 
 DATASETS = {
