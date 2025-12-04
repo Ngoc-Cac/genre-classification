@@ -6,11 +6,18 @@ except ModuleNotFoundError:
     bnb = None
 
 from torchaudio.transforms import MelSpectrogram, MFCC
+
+from data_utils.dataset import FMA, GTZAN
 from spectrograms import (
     Chromagram,
     LogFreqSpectrogram
 )
 
+
+DATASETS = {
+    "fma": FMA,
+    "gtzan": GTZAN
+}
 
 FEATURE_TYPES = {
     'chroma': Chromagram,

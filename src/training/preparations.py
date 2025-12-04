@@ -4,18 +4,16 @@ from torch import optim
 from torch.utils.data import Subset
 from torchaudio.transforms import AmplitudeToDB
 
-from data_utils.dataset import GTZAN
 from models import GenreClassifier
 from .structs import (
+    DATASETS,
     FEATURE_TYPES,
     OPTIMIZERS,
     OPTIMIZERS_8BIT,
     WINDOW_FUNCTIONS,
 )
 
-from typing import Literal, TypeAlias
-
-_ALLOWED_OPTS: TypeAlias = Literal[*tuple(OPTIMIZERS.keys())]
+from typing import Literal
 
 
 def build_dataset(
@@ -45,9 +43,9 @@ def build_dataset(
             spec = amp_to_db(spec)
         return (spec - spec.min()) / (spec.max() - spec.min())
 
-    dataset = GTZAN(
-        data_args['root'], data_args['first_n_secs'], data_args['random_crops'],
-        preprocessor=build_feat
+    dataset = DATASETS[data_args['type']](
+        *data_args['root'], data_args['first_n_secs'],
+        data_args['random_crops'], preprocessor=build_feat
     )
     return dataset.random_split([data_args['train_ratio'], 1 - data_args['train_ratio']])
 

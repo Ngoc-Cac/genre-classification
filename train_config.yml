@@ -1,5 +1,6 @@
 data_args:
-  root: path_to_dataset
+  type: fma
+  root: [metadata_root, audio_root]
   seed: 4
   train_ratio: .8
   first_n_secs: 20
