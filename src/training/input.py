@@ -91,14 +91,6 @@ def validate_training_args(training_args: dict):
             'Please specify as a positive integer.'
         )
 
-    if not isinstance(training_args['regularization_lambda'], (int, float)):
-        raise TypeError('Regularization parameter should be a positive number')
-    elif training_args['regularization_lambda'] < 0:
-        raise ValueError(
-            'Found invalid value for regularization parameter! '
-            'Please specify as a positive number'
-        )
-
     if not isinstance(training_args['distributed_training'], bool):
         raise TypeError(
             'Found invalid type for distributed_training parameter! '
