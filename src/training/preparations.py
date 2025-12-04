@@ -1,4 +1,5 @@
-import os, wave
+import os
+import librosa
 
 from torch import optim
 from torch.utils.data import Subset
@@ -20,9 +21,9 @@ def build_dataset(
     data_args: dict,
     feat_args: dict
 ) -> tuple[Subset, Subset]:
-    root = f"{data_args['root']}/{os.listdir(data_args['root'])[0]}"
-    with wave.open(f"{root}/{os.listdir(root)[0]}") as wave_file:
-        sr = wave_file.getframerate()
+    root = data_args['root'][-1]
+    root = f"{root}/{os.listdir(root)[0]}"
+    _, sr = librosa.load(f"{root}/{os.listdir(root)[0]}", sr=None, duration=1)
 
     feat_type = feat_args['feature_type']
     kwargs = {
