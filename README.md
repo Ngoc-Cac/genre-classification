@@ -39,3 +39,15 @@ You may also specify a different YAML configuration file with:
 ```bash
 python train.py -cf path_to_file
 ```
+
+## About The Dataset
+This project currently uses the [GTZAN dataset](https://www.researchgate.net/publication/3333877_Musical_Genre_Classification_of_Audio_Signals). You can unzip the dataset by running the following command:
+```bash
+unzip assets/gtzan.zip -d assets
+```
+
+This will unzip the GTZAN dataset into assets. You can then specify `assets/gtzan` as the root path in `train_config.yml`.
+
+However, you may also use your own dataset, in which case, just specify the root path in `train_config.yml`. **You must ensure that all audio files in your dataset can be read by** `scipy.io.wavfile.read`**. You must also ensure that all audio files have the same sampling rate.**
+
+The project currently does not handle sampling rate normalization so differing sampling rates in the audio files may result in incorrect frequency binning and spectrogram representation.

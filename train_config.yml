@@ -13,14 +13,18 @@ feature_args:
   window_type: hann
 
 training_args:
-  epochs: 100
-  batch_size: 32
-  learning_rate: 1.0e-5
-  regularization_lambda: 0
-  optimizer: adam
-  use_8bit_optimizer: false
   distributed_training: false
   mixed_precision: false
+  epochs: 100
+  batch_size: 32
+  regularization_lambda: 0
+  optimizer:
+    type: adamw
+    use_8bit_optimizer: false
+    kwargs:
+      lr: 1.0e-4
+      betas: [.9, .999]
+      weight_decay: .01
 
 inout:
   model_path: model.yml
@@ -51,13 +55,17 @@ inout:
 # training_args:
 #   epochs: Total number of training epochs
 #   batch_size: self-explanatory
-#   learning_rate: see above
 #   regularization_lambda: The lambda for L2 regularization, leave 0 for no regularization
-#   optimizer: Choose between adam, adamw and sgd
-#   use_8bit_optimizer: Whether or not to use 8bit-optimization
 #   distributed_training: Whether or not to run distributed training. Only available
 #     if multiple GPUs are present.
 #   mixed_precision: Whether or not to run mixed precision training with fp16.
+#   optimizer:
+#     type: Choose between adam, adamw and sgd
+#     use_8bit_optimizer: Whether or not to use 8bit-optimization
+#     kwargs: other arguments for the optimizers, make sure that your optimizer support this argument
+#       lr: learning rate is one argument, this is also required for all optimizers
+#       weight_decay: another example
+#       ...: ...
 # inout:
 #   model_path: Path to model building configuration file. See model.yml for an example.
 #   logdir: A directory with this name will be created in ckpt_dir
