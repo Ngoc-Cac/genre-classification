@@ -5,14 +5,14 @@ import argparse, datetime, random, warnings
 
 import torch, tqdm
 
-from torch.utils.data import (
-    DataLoader,
-)
+from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from training.input import parse_yml_config
-from training.preparations import build_dataset, build_model
-from training.loops import train_loop, eval_loop
+from training import (
+    parse_yml_config,
+    build_dataset, build_model,
+    train_loop, eval_loop
+)
 
 
 def parse_args(parser: argparse.ArgumentParser):
@@ -71,17 +71,13 @@ loss_fn = torch.nn.CrossEntropyLoss()
 
 
 # run training
-learning_rate = configs['training_args']['optimizer']['kwargs']['lr']
+lr = configs['training_args']['optimizer']['kwargs']['lr']
 def log_train_step(step, loss):
-    global pbar, tb_logger, epoch, train_loader, prev_loss, learning_rate
-    pbar.set_postfix({'loss': loss, 'test_loss': prev_loss})
+    global pbar, tb_logger, epoch, train_loader, prev_loss, lr
     step = (epoch - 1) * len(train_loader) + step
+    pbar.set_postfix({'loss': loss, 'test_loss': prev_loss})
     tb_logger.add_scalar('step/train_loss', loss, step)
-    tb_logger.add_scalar(
-        'step/learning_rate',
-        learning_rate,
-        step
-    )
+    tb_logger.add_scalar('step/learning_rate', lr, step)
 
 tb_logger = SummaryWriter(
     f"{configs['inout']['ckpt_dir']}/{configs['inout']['logdir']}"
@@ -124,16 +120,13 @@ for epoch in pbar:
 
 tb_logger.add_hparams(
     {
-        'batch_size': batch_size,
-        'learning_rate': learning_rate,
+        'batch_size': batch_size, 'learning_rate': lr,
         'optimizer': configs['training_args']['optimizer']['type'],
         'feature_type': configs['feature_args']['feature_type']
     },
     {
-        'hparam/train_accuracy': train_acc,
-        'hparam/test_accuracy': test_acc,
-        'hparam/train_loss': train_loss,
-        'hparam/test_loss': test_loss
+        'hparam/train_accuracy': train_acc, 'hparam/test_accuracy': test_acc,
+        'hparam/train_loss': train_loss, 'hparam/test_loss': test_loss
     }
 )
 
