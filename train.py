@@ -18,9 +18,15 @@ from training import (
 def parse_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         '-cf', '--config_file',
-        help="Path to the yaml file containing the training configuration",
+        help="Path to the yaml file containing the training configuration.",
         type=str,
         default='train_config.yml'
+    )
+    parser.add_argument(
+        '-nw', '--num_workers',
+        help="The number of workers to use for data loading tasks.",
+        type=int,
+        default=0
     )
     return parser.parse_args()
 
@@ -39,8 +45,13 @@ random.seed(configs['data_args']['seed'])
 # build dataset
 batch_size = configs['training_args']['batch_size']
 train_set, test_set = build_dataset(configs['data_args'], configs['feature_args'])
-train_loader = DataLoader(train_set, batch_size, drop_last=True)
-test_loader = DataLoader(test_set, batch_size, drop_last=True)
+train_loader, test_loader = DataLoader(
+    train_set, batch_size, drop_last=True,
+    num_workers=args.num_workers
+), DataLoader(
+    test_set, batch_size, drop_last=True,
+    num_workers=args.num_workers
+)
 
 # build model
 model, optimizer = build_model(
