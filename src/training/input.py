@@ -146,7 +146,7 @@ def validate_inout_args(inout: dict):
 
     if not os.path.exists(inout['model_path']):
         raise FileNotFoundError(
-            "Model configuration file does not exist!"
+            "Model configuration file does not exist! "
             "Please check if the given path is correct."
         )
 
@@ -161,6 +161,6 @@ def validate_inout_args(inout: dict):
         not os.path.exists(inout['checkpoint'])
     ):
         raise FileNotFoundError(
-            'Checkpoint does not exist! '
-            'Please check if the given path is correct'
+            "Checkpoint does not exist! "
+            "Please check if the given path is correct"
         )
