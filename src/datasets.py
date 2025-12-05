@@ -123,8 +123,11 @@ class FMA(_MGRDataset):
         sampling_rate: int | None = None,
         preprocessor: Callable[[torch.Tensor, int], torch.Tensor] | None = None
     ):
+        no_load_ids = pd.read_csv(f"{os.path.dirname(__file__)}/fma_no_load.csv")
         metadata = pd.read_csv(f"{meta_root}/tracks.csv", index_col=0, header=[0, 1])
         metadata = metadata[metadata['set', 'subset'] == subset]
+        metadata = metadata[~metadata.index.isin(no_load_ids['id'])]
+
         test_data = metadata['set', 'split'] == 'test'
         train_data, test_data = metadata[~test_data], metadata[test_data]
 
