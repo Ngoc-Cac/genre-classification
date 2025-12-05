@@ -61,9 +61,11 @@ and the path to the audio directory.
 
 However, you may also use your own dataset, in which case, just specify the root
 path in `train_config.yml`. **You must ensure that all audio files in your dataset**
-**can be read by** `librosa.load`**. You must also ensure that all audio files have**
-**the same sampling rate.**
+**can be read by** `librosa.load`.
 
-The project currently does not handle sampling rate normalization so differing
-sampling rates in the audio files may result in incorrect frequency binning and
-spectrogram representation.
+Note that the implemented spectrogram transforms all require knowing the sampling
+rate beforehand. Thus, any deviation in the given sampling rate will not give
+a correct result due to how the STFT works.
+
+To deal with this, you need to specify a sampling rate to which the loaded
+waveforms are normalized to in `train_config.yml`.
