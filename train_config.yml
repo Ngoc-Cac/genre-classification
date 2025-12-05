@@ -1,6 +1,7 @@
 data_args:
   type: fma
   root: [metadata_root, audio_root]
+  sampling_rate: 22050
   seed: 4
   train_ratio: .8
   first_n_secs: 20

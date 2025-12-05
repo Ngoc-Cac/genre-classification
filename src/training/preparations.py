@@ -45,8 +45,8 @@ def build_dataset(
         return (spec - spec.min()) / (spec.max() - spec.min())
 
     dataset = DATASETS[data_args['type']](
-        *data_args['root'], data_args['first_n_secs'],
-        data_args['random_crops'], preprocessor=build_feat
+        *data_args['root'], data_args['first_n_secs'], data_args['random_crops'],
+        sampling_rate=data_args['sampling_rate'], preprocessor=build_feat
     )
     return dataset.random_split([data_args['train_ratio'], 1 - data_args['train_ratio']])
 

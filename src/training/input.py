@@ -39,6 +39,14 @@ def validate_data_args(data_args: dict):
             "Please check if the given path is correct."
         )
 
+    if not isinstance(data_args['sampling_rate'], int):
+        raise TypeError("sampling_rate should be a positive integer")
+    elif data_args['sampling_rate'] <= 0:
+        raise ValueError(
+            "Found invalid value for sampling_rate! "
+            "Please specify as a positive integer."
+        )
+
     if not isinstance(data_args['train_ratio'], float):
         raise TypeError('train_ratio should be a float between 0 and 11')
     elif not 0 <= data_args['train_ratio'] <= 1:
