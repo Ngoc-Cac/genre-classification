@@ -40,7 +40,8 @@ def validate_data_args(data_args: dict):
         )
 
     if not isinstance(data_args['sampling_rate'], int):
-        raise TypeError("sampling_rate should be a positive integer")
+        if data_args['sampling_rate'] is not None:
+            raise TypeError("sampling_rate should be a positive integer")
     elif data_args['sampling_rate'] <= 0:
         raise ValueError(
             "Found invalid value for sampling_rate! "

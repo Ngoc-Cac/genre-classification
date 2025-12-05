@@ -42,6 +42,9 @@ inout:
 #     is the top level path where all the audio files are store. If FMA is used, an
 #     additional metadata path is needed, specify as [metadata_root, audio_root]. The
 #     metadata root contains all of the metadata files for the dataset.
+#   sampling_rate: The sampling rate to normalize all audios to. This will ensure
+#     the spectrograms will come out correct. If you do not want any resampling
+#     done, leave empty.
 #   seed: seed for splitting data
 #   train_ratio: The train-test split ratio
 #   first_n_secs: Whether to use only the first_n_secs of audio.
