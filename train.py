@@ -47,10 +47,10 @@ batch_size = configs['training_args']['batch_size']
 train_set, test_set = build_dataset(configs['data_args'], configs['feature_args'])
 train_loader, test_loader = DataLoader(
     train_set, batch_size, drop_last=True,
-    num_workers=args.num_workers
+    num_workers=args.num_workers, persistent_workers=True
 ), DataLoader(
     test_set, batch_size, drop_last=True,
-    num_workers=args.num_workers
+    num_workers=args.num_workers, persistent_workers=True
 )
 
 # build model
