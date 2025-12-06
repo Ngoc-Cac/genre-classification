@@ -1,5 +1,8 @@
 data_args:
-  root: path_to_dataset
+  type: fma
+  root: [metadata_root, audio_root]
+  subset_ratio: 
+  sampling_rate: 22050
   seed: 4
   train_ratio: .8
   first_n_secs: 20
@@ -34,7 +37,19 @@ inout:
 ### Description of parameters ###
 #################################
 # data_args:
-#   root: path to the data
+#   type: The tyep of dataset to use for training. Choose between: fma and gtzan.
+#     "fma" refers to the Free Music Archive dataset, gtzan refers to the GTZAN dataset.
+#   root: Path(s) to the data. If GTZAN is used, on the audio root is needed. Audio root
+#     is the top level path where all the audio files are store. If FMA is used, an
+#     additional metadata path is needed, specify as [metadata_root, audio_root]. The
+#     metadata root contains all of the metadata files for the dataset.
+#   sampling_rate: The sampling rate to normalize all audios to. This will ensure
+#     the spectrograms will come out correct. If you do not want any resampling
+#     done, leave empty.
+#   subset_ratio: The ratio of the dataset to use for training. This can be useful
+#     if the dataset is too large and you want to work with only a portion of the
+#     dataset. The subset will be sampled in a stratified manner. If you want to
+#     include all audio files, leave empty.
 #   seed: seed for splitting data
 #   train_ratio: The train-test split ratio
 #   first_n_secs: Whether to use only the first_n_secs of audio.
