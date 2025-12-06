@@ -5,6 +5,7 @@ import pandas as pd
 import librosa
 import torch
 
+from sklearn.model_selection import train_test_split
 from torch.utils.data import random_split, Dataset, Subset
 
 from data_utils.processing_utils import crop_signal
@@ -120,6 +121,7 @@ class FMA(_MGRDataset):
         random_crops: int = 0,
         subset: str = 'small',
         *,
+        subset_ratio: float | None = None,
         sampling_rate: int | None = None,
         preprocessor: Callable[[torch.Tensor, int], torch.Tensor] | None = None
     ):
@@ -130,6 +132,14 @@ class FMA(_MGRDataset):
 
         test_data = metadata['set', 'split'] == 'test'
         train_data, test_data = metadata[~test_data], metadata[test_data]
+
+        if subset_ratio:
+            subset_idx, _ = train_test_split(
+                train_data.index.to_numpy(),
+                train_size=subset_ratio,
+                stratify=train_data['track', 'genre_top'].to_numpy()
+            )
+            train_data = train_data[train_data.index.isin(subset_idx)]
 
         track_ids = (f"{track_id:0>6}" for track_id in train_data.index)
         super().__init__(
