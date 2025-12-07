@@ -2,6 +2,10 @@ import os, sys, logging
 
 from logging.handlers import RotatingFileHandler
 
+# root logger has logging.WARNING by default so we need to
+# set to notset first in order to config any new loggers
+logging.root.setLevel(logging.NOTSET)
+
 
 def setup_logger(
     name: str,
@@ -9,16 +13,15 @@ def setup_logger(
     to_stdout: bool = True
 ) -> logging.Logger:
     FORMATTER = logging.Formatter(
-        fmt='%(asctime)s - %(levelname)s - %(module)s:\n\t%(message)s'
+        fmt='%(asctime)s - %(levelname)s - %(module)s: %(message)s'
     )
     logger = logging.getLogger(name)
-    logger.setLevel(logging.NOTSET)
 
     if to_stdout:
         stream_handler = logging.StreamHandler(sys.stdout)
         stream_handler.setLevel(logging.DEBUG)
         stream_handler.setFormatter(FORMATTER)
-        logger.addHandler()
+        logger.addHandler(stream_handler)
 
     if not os.path.exists(os.path.dirname(log_file)):
         os.makedirs(os.path.dirname(log_file))
