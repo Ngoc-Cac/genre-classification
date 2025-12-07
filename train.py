@@ -3,7 +3,7 @@ sys.path.append('src')
 
 import argparse, datetime, random, warnings
 
-import torch, tqdm
+import numpy as np, torch, tqdm
 
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -30,6 +30,11 @@ def parse_args(parser: argparse.ArgumentParser):
     )
     return parser.parse_args()
 
+def seed(seed):
+    torch.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+
 
 parser = argparse.ArgumentParser(
     description="""Training script for Music Genre Classficiation
@@ -39,8 +44,7 @@ and run training accordingly."""
 args = parse_args(parser)
 configs = parse_yml_config(args.config_file)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-torch.manual_seed(configs['data_args']['seed'])
-random.seed(configs['data_args']['seed'])
+seed(configs['data_args']['seed'])
 
 # build dataset
 batch_size = configs['training_args']['batch_size']
