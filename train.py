@@ -13,6 +13,7 @@ from training import (
     build_dataset, build_model,
     train_loop, eval_loop
 )
+from training.logging import setup_logger
 
 
 def parse_args(parser: argparse.ArgumentParser):
@@ -28,6 +29,11 @@ def parse_args(parser: argparse.ArgumentParser):
         type=int,
         default=0
     )
+    parser.add_argument(
+        '-nv', '--no_verbose',
+        help="Whether to disable the logging to STDOUT when running training.",
+        action='store_true'
+    )
     return parser.parse_args()
 
 def seed(seed):
@@ -41,12 +47,21 @@ parser = argparse.ArgumentParser(
 The script will parse all training arguments from your configuration file
 and run training accordingly."""
 )
+now = datetime.datetime.now()
+timestamp = (
+    f"{(now.year % 100):0>2}{now.month:0>2}{now.day:0>2}-"
+    f"{now.hour:0>2}{now.minute:0>2}{now.second:0>2}"
+)
+py_logger = setup_logger(__name__, f'logs/{timestamp}.log', to_stdout=True)
+
 args = parse_args(parser)
+py_logger.info(f"Parsing training configuration from {args.config_file}...")
 configs = parse_yml_config(args.config_file)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 seed(configs['data_args']['seed'])
 
 # build dataset
+py_logger.info("Preparing the dataset...")
 batch_size = configs['training_args']['batch_size']
 train_set, test_set = build_dataset(configs['data_args'], configs['feature_args'])
 train_loader, test_loader = DataLoader(
@@ -58,6 +73,7 @@ train_loader, test_loader = DataLoader(
 )
 
 # build model
+py_logger.info("Preparing the model...")
 model, optimizer = build_model(
     len(train_set.dataset._genre_to_id),
     configs['inout']['model_path'],
@@ -86,7 +102,36 @@ loss_fn = torch.nn.CrossEntropyLoss()
 
 
 # run training
+mixed_prec = configs['training_args']['mixed_precision']
+distributed = configs['training_args']['distributed_training']
+optimizer_type = configs['training_args']['optimizer']['type']
+total_epochs = configs['training_args']['epochs']
 lr = configs['training_args']['optimizer']['kwargs']['lr']
+
+if configs['training_args']['optimizer']['use_8bit_optimizer']:
+    optimizer_type = "8-bit " + optimizer_type
+py_logger.info(f"""
+========== RUNNING TRAINING WITH CONFIGURATIONS ==========
+Distributed training: {distributed}
+Mixed-precision: {mixed_prec}
+Total training | testing samples: {len(train_set)} | {len(test_set)}
+Total batches per epoch: {len(train_loader)}
+Epochs: {total_epochs}
+Batch size: {batch_size}
+Learning rate: {lr}
+Optimizer: {optimizer_type}
+=========================================================="""
+)
+tb_logger = SummaryWriter(
+    f"{configs['inout']['ckpt_dir']}/{configs['inout']['logdir']}"
+)
+pbar = tqdm.tqdm(
+    (
+        range(1 + ckpt['epoch'], total_epochs + ckpt['epoch'] + 1)
+        if configs['inout']['checkpoint'] else range(1, total_epochs + 1)
+    ),
+    desc='Epoch'
+)
 def log_train_step(step, loss):
     global pbar, tb_logger, epoch, train_loader, prev_loss, lr
     step = (epoch - 1) * len(train_loader) + step
@@ -94,17 +139,6 @@ def log_train_step(step, loss):
     tb_logger.add_scalar('step/train_loss', loss, step)
     tb_logger.add_scalar('step/learning_rate', lr, step)
 
-tb_logger = SummaryWriter(
-    f"{configs['inout']['ckpt_dir']}/{configs['inout']['logdir']}"
-)
-pbar = tqdm.tqdm(
-    (
-        range(1 + ckpt['epoch'], configs['training_args']['epochs'] + ckpt['epoch'] + 1)
-        if configs['inout']['checkpoint'] else range(1, configs['training_args']['epochs'] + 1)
-    ),
-    desc='Epoch'
-)
-mixed_prec = configs['training_args']['mixed_precision']
 prev_loss = None
 for epoch in pbar:
     model.train()
@@ -136,7 +170,7 @@ for epoch in pbar:
 tb_logger.add_hparams(
     {
         'batch_size': batch_size, 'learning_rate': lr,
-        'optimizer': configs['training_args']['optimizer']['type'],
+        'optimizer': optimizer_type,
         'feature_type': configs['feature_args']['feature_type']
     },
     {
@@ -146,14 +180,6 @@ tb_logger.add_hparams(
 )
 
 tb_logger.close()
-
-
-now = datetime.datetime.now()
-timestamp = (
-    f"{(now.year % 100):0>2}{now.month:0>2}{now.day:0>2}-"
-    f"{now.hour:0>2}{now.minute:0>2}{now.second:0>2}"
-)
-
 torch.save(
     {
         'epoch': epoch,
