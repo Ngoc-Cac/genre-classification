@@ -1,66 +1,84 @@
 import sys
 sys.path.append('src')
 
-import argparse, datetime, random, warnings
+import argparse, datetime
 
 import torch, tqdm
 
-from torch.utils.data import (
-    DataLoader,
-)
+from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from training.input import parse_yml_config
-from training.preparations import build_dataset, build_model
-from training.loops import train_loop, eval_loop
+from training import (
+    seed, parse_yml_config,
+    build_dataset, build_model,
+    train_loop, eval_loop
+)
+from training.logging import setup_logger
 
 
 def parse_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         '-cf', '--config_file',
-        help="Path to the yaml file containing the training configuration",
+        help="Path to the yaml file containing the training configuration.",
         type=str,
         default='train_config.yml'
+    )
+    parser.add_argument(
+        '-nw', '--num_workers',
+        help="The number of workers to use for data loading tasks.",
+        type=int,
+        default=0
+    )
+    parser.add_argument(
+        '-nv', '--no_verbose',
+        help="Whether to disable the logging to STDOUT when running training.",
+        action='store_true'
     )
     return parser.parse_args()
 
 
 parser = argparse.ArgumentParser(
-    description="""Training script for Music Genre Classficiation
+    description="""Training script for Music Genre Classification.
 The script will parse all training arguments from your configuration file
 and run training accordingly."""
 )
+now = datetime.datetime.now()
+timestamp = (
+    f"{(now.year % 100):0>2}{now.month:0>2}{now.day:0>2}-"
+    f"{now.hour:0>2}{now.minute:0>2}{now.second:0>2}"
+)
+py_logger = setup_logger(__name__, f'logs/{timestamp}.log', to_stdout=True)
+
 args = parse_args(parser)
+py_logger.info(f"Parsing training configuration from {args.config_file}...")
 configs = parse_yml_config(args.config_file)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-torch.manual_seed(configs['data_args']['seed'])
-random.seed(configs['data_args']['seed'])
+seed(configs['data_args']['seed'])
 
 # build dataset
+py_logger.info("Preparing the dataset...")
 batch_size = configs['training_args']['batch_size']
 train_set, test_set = build_dataset(configs['data_args'], configs['feature_args'])
-train_loader = DataLoader(train_set, batch_size, drop_last=True)
-test_loader = DataLoader(test_set, batch_size, drop_last=True)
+train_loader, test_loader = DataLoader(
+    train_set, batch_size, drop_last=True,
+    num_workers=args.num_workers, persistent_workers=args.num_workers
+), DataLoader(
+    test_set, batch_size, drop_last=True,
+    num_workers=args.num_workers, persistent_workers=args.num_workers
+)
 
 # build model
+py_logger.info("Preparing the model...")
 model, optimizer = build_model(
     len(train_set.dataset._genre_to_id),
     configs['inout']['model_path'],
     configs['training_args']['optimizer'],
     device=device,
+    distirbuted_training=configs['training_args']['distributed_training']
 )
 
 gradient_scaler = torch.amp.grad_scaler.GradScaler(enabled=configs['training_args']['mixed_precision'])
 
-if configs['training_args']['distributed_training']:
-    if torch.cuda.device_count() > 1:
-        model = torch.nn.DataParallel(model)
-    else:
-        warnings.warn(
-            "distributed_training=true but only one GPU found! "
-            "Running on single GPU instead...",
-            RuntimeWarning
-        )
 if configs['inout']['checkpoint']:
     ckpt = torch.load(configs['inout']['checkpoint'], weights_only=True)
     model.load_state_dict(ckpt['model'])
@@ -71,29 +89,43 @@ loss_fn = torch.nn.CrossEntropyLoss()
 
 
 # run training
-learning_rate = configs['training_args']['optimizer']['kwargs']['lr']
-def log_train_step(step, loss):
-    global pbar, tb_logger, epoch, train_loader, prev_loss, learning_rate
-    pbar.set_postfix({'loss': loss, 'test_loss': prev_loss})
-    step = (epoch - 1) * len(train_loader) + step
-    tb_logger.add_scalar('step/train_loss', loss, step)
-    tb_logger.add_scalar(
-        'step/learning_rate',
-        learning_rate,
-        step
-    )
+mixed_prec = configs['training_args']['mixed_precision']
+distributed = configs['training_args']['distributed_training']
+optimizer_type = configs['training_args']['optimizer']['type']
+total_epochs = configs['training_args']['epochs']
+lr = configs['training_args']['optimizer']['kwargs']['lr']
 
+if configs['training_args']['optimizer']['use_8bit_optimizer']:
+    optimizer_type = "8-bit " + optimizer_type
+py_logger.info(f"""
+========== RUNNING TRAINING WITH CONFIGURATIONS ==========
+Distributed training: {distributed}
+Mixed-precision: {mixed_prec}
+Total training | testing samples: {len(train_set)} | {len(test_set)}
+Total batches per epoch: {len(train_loader)}
+Epochs: {total_epochs}
+Batch size: {batch_size}
+Learning rate: {lr}
+Optimizer: {optimizer_type}
+=========================================================="""
+)
 tb_logger = SummaryWriter(
     f"{configs['inout']['ckpt_dir']}/{configs['inout']['logdir']}"
 )
 pbar = tqdm.tqdm(
     (
-        range(1 + ckpt['epoch'], configs['training_args']['epochs'] + ckpt['epoch'] + 1)
-        if configs['inout']['checkpoint'] else range(1, configs['training_args']['epochs'] + 1)
+        range(1 + ckpt['epoch'], total_epochs + ckpt['epoch'] + 1)
+        if configs['inout']['checkpoint'] else range(1, total_epochs + 1)
     ),
     desc='Epoch'
 )
-mixed_prec = configs['training_args']['mixed_precision']
+def log_train_step(step, loss):
+    global pbar, tb_logger, epoch, train_loader, prev_loss, lr
+    step = (epoch - 1) * len(train_loader) + step
+    pbar.set_postfix({'loss': loss, 'test_loss': prev_loss})
+    tb_logger.add_scalar('step/train_loss', loss, step)
+    tb_logger.add_scalar('step/learning_rate', lr, step)
+
 prev_loss = None
 for epoch in pbar:
     model.train()
@@ -124,28 +156,17 @@ for epoch in pbar:
 
 tb_logger.add_hparams(
     {
-        'batch_size': batch_size,
-        'learning_rate': learning_rate,
-        'optimizer': configs['training_args']['optimizer']['type'],
+        'batch_size': batch_size, 'learning_rate': lr,
+        'optimizer': optimizer_type,
         'feature_type': configs['feature_args']['feature_type']
     },
     {
-        'hparam/train_accuracy': train_acc,
-        'hparam/test_accuracy': test_acc,
-        'hparam/train_loss': train_loss,
-        'hparam/test_loss': test_loss
+        'hparam/train_accuracy': train_acc, 'hparam/test_accuracy': test_acc,
+        'hparam/train_loss': train_loss, 'hparam/test_loss': test_loss
     }
 )
 
 tb_logger.close()
-
-
-now = datetime.datetime.now()
-timestamp = (
-    f"{(now.year % 100):0>2}{now.month:0>2}{now.day:0>2}-"
-    f"{now.hour:0>2}{now.minute:0>2}{now.second:0>2}"
-)
-
 torch.save(
     {
         'epoch': epoch,

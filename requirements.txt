@@ -2,8 +2,8 @@
 numpy>=2.3.4
 pandas>=2.3.3
 
-# convenient loading wav files into numpy
-scipy>=1.16.3
+# loading wav and mp3 files into numpy arrays
+librosa>=0.11
 
 # parsing stuff
 pyyaml>=6.0.3

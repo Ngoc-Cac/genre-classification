@@ -1,55 +1,29 @@
-import os, itertools, wave
+import os, warnings
+import librosa
 import torch
 
-from torch import optim
-from torch.utils.data import random_split, Subset
+from torch.utils.data import Subset
+from torchaudio.transforms import AmplitudeToDB
 
-from data_utils.dataset import GTZAN
 from models import GenreClassifier
 from .structs import (
+    DATASETS,
     FEATURE_TYPES,
     OPTIMIZERS,
     OPTIMIZERS_8BIT,
     WINDOW_FUNCTIONS,
 )
 
-from typing import Literal, TypeAlias
-
-_ALLOWED_OPTS: TypeAlias = Literal[*tuple(OPTIMIZERS.keys())]
-
-
-def _normalize_spec(spec, is_mfcc=False):
-    # don't convert to log scale if already mfcc
-    if not is_mfcc:
-        spec = torch.log(1 + spec)
-    return (spec - spec.min()) / (spec.max() - spec.min())
-
-
-def _train_test_split(
-    dataset: GTZAN,
-    train_ratio: float
-) -> tuple[Subset, Subset]:
-    # random_split doesnt actually check if dataset is a Dataset, it just neds a len method
-    train_set, test_set = random_split(dataset._files, [train_ratio, 1 - train_ratio])
-    train_idx, test_idx = train_set.indices, test_set.indices
-
-    if (mult := dataset._rand_crops) > 1:
-        train_idx = list(itertools.chain(*(
-            [idx * mult + i for i in range(mult)] for idx in train_idx
-        )))
-        test_idx = list(itertools.chain(*(
-            [idx * mult + i for i in range(mult)] for idx in test_idx
-        )))
-    return Subset(dataset, train_idx), Subset(dataset, test_idx)
+from typing import Literal
 
 
 def build_dataset(
     data_args: dict,
     feat_args: dict
 ) -> tuple[Subset, Subset]:
-    root = f"{data_args['root']}/{os.listdir(data_args['root'])[0]}"
-    with wave.open(f"{root}/{os.listdir(root)[0]}") as wave_file:
-        sr = wave_file.getframerate()
+    root = data_args['root'][-1]
+    root = f"{root}/{os.listdir(root)[0]}"
+    _, sr = librosa.load(f"{root}/{os.listdir(root)[0]}", sr=None, duration=1)
 
     feat_type = feat_args['feature_type']
     kwargs = {
@@ -62,14 +36,26 @@ def build_dataset(
         kwargs = {"melkwargs": kwargs, "n_mfcc": feat_args['n_mfcc']}
 
     spec_builder = FEATURE_TYPES[feat_type](sr, **kwargs)
-    dataset = GTZAN(
-        data_args['root'], data_args['first_n_secs'], data_args['random_crops'],
-        preprocessor=lambda wave, _: _normalize_spec(
-            spec_builder(wave / abs(wave).max()).unflatten(0, (1, -1)),
-            feat_type == 'mfcc'
-        )
+    amp_to_db = AmplitudeToDB(top_db=80)
+    def build_feat(wave, _):
+        # don't convert to log scale if already mfcc
+        spec = spec_builder(wave).unflatten(0, (1, -1))
+        if feat_type != 'mfcc':
+            spec = amp_to_db(spec)
+        return (spec - spec.min()) / (spec.max() - spec.min())
+
+    kwargs = {
+        "sampling_rate": data_args['sampling_rate'],
+        "preprocessor": build_feat
+    }
+    if data_args['type'] == 'fma':
+        kwargs['subset_ratio'] = data_args['subset_ratio']
+
+    dataset = DATASETS[data_args['type']](
+        *data_args['root'], data_args['first_n_secs'],
+        data_args['random_crops'], **kwargs
     )
-    return _train_test_split(dataset, data_args['train_ratio'])
+    return dataset.random_split([data_args['train_ratio'], 1 - data_args['train_ratio']])
 
 
 def build_model(
@@ -77,10 +63,22 @@ def build_model(
     model_config_file: str,
     optimizer_args: dict,
     *,
-    device: Literal['cuda', 'cpu'] = 'cpu'
-) -> tuple[GenreClassifier, optim.Optimizer]:
+    device: Literal['cuda', 'cpu'] = 'cpu',
+    distirbuted_training: bool = False
+) -> tuple[GenreClassifier, torch.optim.Optimizer]:
     model = GenreClassifier(1, num_labels, model_config_file).to(device)
     optimizer = (
         OPTIMIZERS_8BIT if optimizer_args['use_8bit_optimizer'] else OPTIMIZERS
     )[optimizer_args['type']]
+
+    if distirbuted_training:
+        if torch.cuda.device_count() > 1:
+            model = torch.nn.DataParallel(model)
+    else:
+        warnings.warn(
+            "distributed_training=true but only one GPU found! "
+            "Running on single GPU instead...",
+            RuntimeWarning
+        )
+
     return model, optimizer(model.parameters(), **optimizer_args['kwargs'])

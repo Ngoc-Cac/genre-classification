@@ -1,6 +1,7 @@
 import os, yaml
 
 from .structs import (
+    DATASETS,
     FEATURE_TYPES,
     OPTIMIZERS,
     OPTIMIZERS_8BIT,
@@ -12,6 +13,10 @@ def parse_yml_config(filepath: str):
     with open(filepath) as file:
         configs = yaml.safe_load(file)
 
+    # convert to list for easier argument passing later on
+    if not isinstance(configs['data_args']['root'], list):
+        configs['data_args']['root'] = [configs['data_args']['root']]
+
     validate_data_args(configs['data_args'])
     validate_feat_args(configs['feature_args'])
     validate_training_args(configs['training_args'])
@@ -21,14 +26,40 @@ def parse_yml_config(filepath: str):
 
 
 def validate_data_args(data_args: dict):
-    if not os.path.exists(data_args['root']):
+    if data_args['type'] not in DATASETS:
+        raise ValueError(f"Dataset type should be one of: {list(DATASETS.keys())}")
+    elif data_args['type'] == 'fma' and len(data_args['root']) != 2:
+        raise ValueError(
+            "Invalid 'root' argument for FMA dataset!"
+            "Specify as [metadata_root, audio_root]."
+        )
+    elif not all(os.path.exists(p) for p in data_args['root']):
         raise FileNotFoundError(
-            'Data root folder does not exist! '
-            'Please check if the given path is correct.'
+            "Cannot find the given root path! "
+            "Please check if the given path is correct."
         )
 
+    if not isinstance(data_args['sampling_rate'], int):
+        if data_args['sampling_rate'] is not None:
+            raise TypeError("sampling_rate should be a positive integer")
+    elif data_args['sampling_rate'] <= 0:
+        raise ValueError(
+            "Found invalid value for sampling_rate! "
+            "Please specify as a positive integer."
+        )
+
+    if (data_args['type'] == 'fma'):
+        if not isinstance(data_args['subset_ratio'], float):
+            if data_args['subset_ratio'] is not None:
+                raise TypeError("subset_ratio should be a float between 0 and 1.")
+        elif not 0 <= data_args['subset_ratio'] <= 1:
+            raise ValueError(
+                "Found invalid value for subset ratio! "
+                "Please specify as a number between 0 and 1."
+            )
+
     if not isinstance(data_args['train_ratio'], float):
-        raise TypeError('train_ratio should be a float between 0 and 11')
+        raise TypeError('train_ratio should be a float between 0 and 1.')
     elif not 0 <= data_args['train_ratio'] <= 1:
         raise ValueError(
             'Found invalid value for train_ratio! '
@@ -134,7 +165,7 @@ def validate_inout_args(inout: dict):
 
     if not os.path.exists(inout['model_path']):
         raise FileNotFoundError(
-            "Model configuration file does not exist!"
+            "Model configuration file does not exist! "
             "Please check if the given path is correct."
         )
 
@@ -149,6 +180,6 @@ def validate_inout_args(inout: dict):
         not os.path.exists(inout['checkpoint'])
     ):
         raise FileNotFoundError(
-            'Checkpoint does not exist! '
-            'Please check if the given path is correct'
+            "Checkpoint does not exist! "
+            "Please check if the given path is correct"
         )
