@@ -1,9 +1,9 @@
 import sys
 sys.path.append('src')
 
-import argparse, datetime, random, warnings
+import argparse, datetime
 
-import numpy as np, torch, tqdm
+import torch, tqdm
 
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -74,19 +74,11 @@ model, optimizer = build_model(
     configs['inout']['model_path'],
     configs['training_args']['optimizer'],
     device=device,
+    distirbuted_training=configs['training_args']['distributed_training']
 )
 
 gradient_scaler = torch.amp.grad_scaler.GradScaler(enabled=configs['training_args']['mixed_precision'])
 
-if configs['training_args']['distributed_training']:
-    if torch.cuda.device_count() > 1:
-        model = torch.nn.DataParallel(model)
-    else:
-        warnings.warn(
-            "distributed_training=true but only one GPU found! "
-            "Running on single GPU instead...",
-            RuntimeWarning
-        )
 if configs['inout']['checkpoint']:
     ckpt = torch.load(configs['inout']['checkpoint'], weights_only=True)
     model.load_state_dict(ckpt['model'])

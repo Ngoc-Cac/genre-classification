@@ -1,7 +1,7 @@
-import os
+import os, warnings
 import librosa
+import torch
 
-from torch import optim
 from torch.utils.data import Subset
 from torchaudio.transforms import AmplitudeToDB
 
@@ -63,10 +63,22 @@ def build_model(
     model_config_file: str,
     optimizer_args: dict,
     *,
-    device: Literal['cuda', 'cpu'] = 'cpu'
-) -> tuple[GenreClassifier, optim.Optimizer]:
+    device: Literal['cuda', 'cpu'] = 'cpu',
+    distirbuted_training: bool = False
+) -> tuple[GenreClassifier, torch.optim.Optimizer]:
     model = GenreClassifier(1, num_labels, model_config_file).to(device)
     optimizer = (
         OPTIMIZERS_8BIT if optimizer_args['use_8bit_optimizer'] else OPTIMIZERS
     )[optimizer_args['type']]
+
+    if distirbuted_training:
+        if torch.cuda.device_count() > 1:
+            model = torch.nn.DataParallel(model)
+    else:
+        warnings.warn(
+            "distributed_training=true but only one GPU found! "
+            "Running on single GPU instead...",
+            RuntimeWarning
+        )
+
     return model, optimizer(model.parameters(), **optimizer_args['kwargs'])
