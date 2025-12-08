@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from training import (
-    parse_yml_config,
+    seed, parse_yml_config,
     build_dataset, build_model,
     train_loop, eval_loop
 )
@@ -35,11 +35,6 @@ def parse_args(parser: argparse.ArgumentParser):
         action='store_true'
     )
     return parser.parse_args()
-
-def seed(seed):
-    torch.manual_seed(seed)
-    random.seed(seed)
-    np.random.seed(seed)
 
 
 parser = argparse.ArgumentParser(
