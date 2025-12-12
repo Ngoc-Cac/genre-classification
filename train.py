@@ -60,17 +60,18 @@ py_logger.info("Preparing the dataset...")
 batch_size = configs['training_args']['batch_size']
 train_set, test_set = build_dataset(configs['data_args'], configs['feature_args'])
 train_loader, test_loader = DataLoader(
-    train_set, batch_size, drop_last=True, shuffle=True,
-    num_workers=args.num_workers, persistent_workers=args.num_workers
+    train_set, batch_size, shuffle=True,
+    drop_last=(len(train_set) % batch_size == 1),
+    num_workers=args.num_workers, persistent_workers=bool(args.num_workers)
 ), DataLoader(
-    test_set, batch_size, drop_last=True,
-    num_workers=args.num_workers, persistent_workers=args.num_workers
+    test_set, batch_size,
+    num_workers=args.num_workers, persistent_workers=bool(args.num_workers)
 )
 
 # build model
 py_logger.info("Preparing the model...")
 model, optimizer = build_model(
-    len(train_set.dataset._genre_to_id),
+    len(train_set.dataset.num_genres),
     configs['inout']['model_path'],
     configs['training_args']['optimizer'],
     device=device,

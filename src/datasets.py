@@ -43,6 +43,10 @@ class _MGRDataset(Dataset):
     def id_to_genre(self):
         return {i: genre for genre, i in self._genre_to_id.values()}
 
+    @property
+    def num_genres(self):
+        return len(self._genre_to_id)
+
     def random_split(self, ratios: list[float]) -> tuple[Subset, Subset]:
         # random_split doesnt actually check if dataset is a Dataset,
         # it just needs an object with len method
@@ -164,16 +168,14 @@ class FMA(_MGRDataset):
             split: train_data[train_data['set', 'split'] == split].index.tolist()
             for split in ['training', 'validation']
         }
-        if self._rand_crops > 1:
-            splits = {
-                split: [
-                    idx * self._rand_crops + i
-                    for idx in indices for i in range(self._rand_crops)
-                ]
-                for split, indices in splits.items()
-            }
+        num_crops = self._rand_crops
         self._splits = {
-            split: Subset(self, indices) for split, indices in splits.items()
+            split: Subset(
+                self,
+                [idx * num_crops + i for idx in indices for i in range(num_crops)]
+                if num_crops > 1 else indices
+            )
+            for split, indices in splits.items()
         }
 
     def random_split(self, ratios: list[float] | None = None):
