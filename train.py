@@ -128,7 +128,6 @@ def log_train_step(step, loss):
     postfix_dict['loss'] = loss
     pbar.set_postfix(postfix_dict)
     tb_logger.add_scalar('step/train_loss', loss, step)
-    tb_logger.add_scalar('step/learning_rate', lr, step)
 
 postfix_dict = {'test_loss': None, 'test_acc': None}
 for epoch in pbar:
@@ -150,6 +149,7 @@ for epoch in pbar:
     postfix_dict['test_loss'] = test_loss = test_loss / len(test_loader)
     postfix_dict['test_acc'] = test_acc = test_acc / len(test_set)
 
+    tb_logger.add_scalar('epoch/lr', lr, epoch)
     tb_logger.add_scalars(
         'epoch/loss', {'train': train_loss, 'test': test_loss}, epoch
     )
