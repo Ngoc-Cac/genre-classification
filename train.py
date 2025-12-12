@@ -1,7 +1,7 @@
 import sys
 sys.path.append('src')
 
-import argparse, datetime
+import argparse, datetime, textwrap
 
 import torch, tqdm
 
@@ -20,14 +20,12 @@ def parse_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         '-cf', '--config_file',
         help="Path to the yaml file containing the training configuration.",
-        type=str,
-        default='train_config.yml'
+        type=str, default='train_config.yml'
     )
     parser.add_argument(
         '-nw', '--num_workers',
         help="The number of workers to use for data loading tasks.",
-        type=int,
-        default=0
+        type=int, default=0
     )
     parser.add_argument(
         '-nv', '--no_verbose',
@@ -38,9 +36,13 @@ def parse_args(parser: argparse.ArgumentParser):
 
 
 parser = argparse.ArgumentParser(
-    description="""Training script for Music Genre Classification.
-The script will parse all training arguments from your configuration file
-and run training accordingly."""
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description=textwrap.dedent("""\
+              Music Genre Classification Training Script
+        ------------------------------------------------------
+        The script will parse all training arguments from your
+           configuration file and run training accordingly.
+    """)
 )
 now = datetime.datetime.now()
 timestamp = (
@@ -78,7 +80,8 @@ model, optimizer = build_model(
     distirbuted_training=configs['training_args']['distributed_training']
 )
 
-gradient_scaler = torch.amp.grad_scaler.GradScaler(enabled=configs['training_args']['mixed_precision'])
+mixed_prec = configs['training_args']['mixed_precision']
+gradient_scaler = torch.amp.grad_scaler.GradScaler(enabled=mixed_prec)
 
 if configs['inout']['checkpoint']:
     ckpt = torch.load(configs['inout']['checkpoint'], weights_only=True)
@@ -90,7 +93,6 @@ loss_fn = torch.nn.CrossEntropyLoss()
 
 
 # run training
-mixed_prec = configs['training_args']['mixed_precision']
 distributed = configs['training_args']['distributed_training']
 optimizer_type = configs['training_args']['optimizer']['type']
 total_epochs = configs['training_args']['epochs']
@@ -98,18 +100,18 @@ lr = configs['training_args']['optimizer']['kwargs']['lr']
 
 if configs['training_args']['optimizer']['use_8bit_optimizer']:
     optimizer_type = "8-bit " + optimizer_type
-py_logger.info(f"""
-========== RUNNING TRAINING WITH CONFIGURATIONS ==========
-Distributed training: {distributed}
-Mixed-precision: {mixed_prec}
-Total training | testing samples: {len(train_set)} | {len(test_set)}
-Total batches per epoch: {len(train_loader)}
-Epochs: {total_epochs}
-Batch size: {batch_size}
-Learning rate: {lr}
-Optimizer: {optimizer_type}
-=========================================================="""
-)
+py_logger.info(textwrap.dedent(f"""
+    ========== RUNNING TRAINING WITH CONFIGURATIONS ==========
+    Distributed training: {distributed}
+    Mixed-precision: {mixed_prec}
+    Total training | testing samples: {len(train_set)} | {len(test_set)}
+    Total batches per epoch: {len(train_loader)}
+    Epochs: {total_epochs}
+    Batch size: {batch_size}
+    Learning rate: {lr}
+    Optimizer: {optimizer_type}
+    ==========================================================
+"""))
 tb_logger = SummaryWriter(
     f"{configs['inout']['ckpt_dir']}/{configs['inout']['logdir']}"
 )
@@ -121,13 +123,14 @@ pbar = tqdm.tqdm(
     desc='Epoch'
 )
 def log_train_step(step, loss):
-    global pbar, tb_logger, epoch, train_loader, prev_loss, lr
+    global pbar, tb_logger, epoch, train_loader, postfix_dict, lr
     step = (epoch - 1) * len(train_loader) + step
-    pbar.set_postfix({'loss': loss, 'test_loss': prev_loss})
+    postfix_dict['loss'] = loss
+    pbar.set_postfix(postfix_dict)
     tb_logger.add_scalar('step/train_loss', loss, step)
     tb_logger.add_scalar('step/learning_rate', lr, step)
 
-prev_loss = None
+postfix_dict = {'test_loss': None, 'test_acc': None}
 for epoch in pbar:
     model.train()
     train_loss, train_acc = train_loop(
@@ -143,9 +146,9 @@ for epoch in pbar:
     )
 
     train_loss = train_loss / len(train_loader)
-    prev_loss = test_loss = test_loss / len(test_loader)
     train_acc = train_acc / len(train_set)
-    test_acc = test_acc / len(test_set)
+    postfix_dict['test_loss'] = test_loss = test_loss / len(test_loader)
+    postfix_dict['test_acc'] = test_acc = test_acc / len(test_set)
 
     tb_logger.add_scalars(
         'epoch/loss', {'train': train_loss, 'test': test_loss}, epoch
