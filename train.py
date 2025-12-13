@@ -72,10 +72,11 @@ train_loader, test_loader = DataLoader(
 
 # build model
 py_logger.info("Preparing the model...")
-model, optimizer = build_model(
+model, optimizer, lr_scheduler = build_model(
     train_set.dataset.num_genres,
     configs['inout']['model_path'],
     configs['training_args']['optimizer'],
+    configs['training_args']['lr_schedulers'],
     device=device,
     distirbuted_training=configs['training_args']['distributed_training']
 )
@@ -102,13 +103,11 @@ if configs['training_args']['optimizer']['use_8bit_optimizer']:
     optimizer_type = "8-bit " + optimizer_type
 py_logger.info(textwrap.dedent(f"""
     ========== RUNNING TRAINING WITH CONFIGURATIONS ==========
-    Distributed training: {distributed}
-    Mixed-precision: {mixed_prec}
+    Distributed training: {distributed} | Mixed-precision: {mixed_prec}
     Total training | testing samples: {len(train_set)} | {len(test_set)}
     Total batches per epoch: {len(train_loader)}
-    Epochs: {total_epochs}
-    Batch size: {batch_size}
-    Learning rate: {lr}
+    Total Epochs: {total_epochs}
+    Batch size: {batch_size} | Initial Learning rate: {lr}
     Optimizer: {optimizer_type}
     ==========================================================
 """))
@@ -143,13 +142,14 @@ for epoch in pbar:
         model, test_loader, loss_fn, device=device,
         mixed_precision=mixed_prec
     )
+    lr_scheduler.step()
 
     train_loss = train_loss / len(train_loader)
     train_acc = train_acc / len(train_set)
     postfix_dict['test_loss'] = test_loss = test_loss / len(test_loader)
     postfix_dict['test_acc'] = test_acc = test_acc / len(test_set)
 
-    tb_logger.add_scalar('epoch/lr', lr, epoch)
+    tb_logger.add_scalar('epoch/lr', lr_scheduler.get_last_lr()[0], epoch)
     tb_logger.add_scalars(
         'epoch/loss', {'train': train_loss, 'test': test_loss}, epoch
     )
