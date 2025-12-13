@@ -89,6 +89,7 @@ if configs['inout']['checkpoint']:
     model.load_state_dict(ckpt['model'])
     optimizer.load_state_dict(ckpt['optimizer'])
     gradient_scaler.load_state_dict(ckpt['gradient_scaler'])
+    lr_scheduler.load_state_dict(ckpt['lr_scheduler'])
 
 loss_fn = torch.nn.CrossEntropyLoss()
 
@@ -176,7 +177,8 @@ torch.save(
         'epoch': epoch,
         'model': model.state_dict(),
         'optimizer': optimizer.state_dict(),
-        'gradient_scaler': gradient_scaler.state_dict()
+        'gradient_scaler': gradient_scaler.state_dict(),
+        'lr_scheduler': lr_scheduler.state_dict()
     },
     f"{configs['inout']['ckpt_dir']}/{timestamp}.pth"
 )
