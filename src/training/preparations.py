@@ -19,9 +19,12 @@ from typing import Literal
 
 
 def build_dataset(data_args: dict, feat_args: dict) -> tuple[Subset, Subset]:
-    root = data_args['root'][-1]
-    root = f"{root}/{os.listdir(root)[0]}"
-    _, sr = librosa.load(f"{root}/{os.listdir(root)[0]}", sr=None, duration=1)
+    if data_args['sampling_rate']:
+        sr = data_args['sampling_rate']
+    else:
+        root = data_args['root'][-1]
+        root = f"{root}/{os.listdir(root)[0]}"
+        _, sr = librosa.load(f"{root}/{os.listdir(root)[0]}", sr=None, duration=1)
 
     feat_type = feat_args['feature_type']
     kwargs = {
@@ -69,12 +72,12 @@ def build_model(
     if distirbuted_training:
         if torch.cuda.device_count() > 1:
             model = torch.nn.DataParallel(model)
-    else:
-        warnings.warn(
-            "distributed_training=true but only one GPU found! "
-            "Running on single GPU instead...",
-            RuntimeWarning
-        )
+        else:
+            warnings.warn(
+                "distributed_training=true but only one GPU found! "
+                "Running on single GPU instead...",
+                RuntimeWarning
+            )
 
     optimizer = (
         OPTIMIZERS_8BIT if optimizer_args['use_8bit_optimizer'] else OPTIMIZERS
