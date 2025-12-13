@@ -73,7 +73,7 @@ train_loader, test_loader = DataLoader(
 # build model
 py_logger.info("Preparing the model...")
 model, optimizer = build_model(
-    len(train_set.dataset.num_genres),
+    train_set.dataset.num_genres,
     configs['inout']['model_path'],
     configs['training_args']['optimizer'],
     device=device,
@@ -123,7 +123,7 @@ pbar = tqdm.tqdm(
     desc='Epoch'
 )
 def log_train_step(step, loss):
-    global pbar, tb_logger, epoch, train_loader, postfix_dict, lr
+    global pbar, tb_logger, epoch, train_loader, postfix_dict
     step = (epoch - 1) * len(train_loader) + step
     postfix_dict['loss'] = loss
     pbar.set_postfix(postfix_dict)
