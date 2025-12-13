@@ -190,17 +190,18 @@ def _validate_scheduler_args(scheduler_args: dict):
             "Found negative value for total_steps in warmup configuration! "
             "Please specify as a non-negative integer."
         )
-
-    if not isinstance(scheduler_args['warmup']['start_factor'], (int, float)):
-        raise TypeError(
-            "start_factor in warmup configuration should "
-            "be a number in the range (0, 1)!"
-        )
-    elif not 0 < scheduler_args['warmup']['start_factor'] < 1:
-        raise ValueError(
-            "Found invalid value for start_factor in warmup configuration! "
-            "Please specify as a number in the range (0, 1)."
-        )
+    elif scheduler_args['warmup']['total_steps'] != 0:
+        # ignore this validation if total_steps == 0
+        if not isinstance(scheduler_args['warmup']['start_factor'], (int, float)):
+            raise TypeError(
+                "start_factor in warmup configuration should "
+                "be a number in the range (0, 1)!"
+            )
+        elif not 0 < scheduler_args['warmup']['start_factor'] < 1:
+            raise ValueError(
+                "Found invalid value for start_factor in warmup configuration! "
+                "Please specify as a number in the range (0, 1)."
+            )
 
     if scheduler_args['decay']['type'] not in SCHEDULERS:
         raise ValueError(

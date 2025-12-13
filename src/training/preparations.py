@@ -89,7 +89,8 @@ def build_model(
 
     warmup_scheduler = SCHEDULERS['linear'](
         optimizer, warmup_start_factor, total_iters=warmup_steps
-    )
+    ) if warmup_steps else SCHEDULERS[None](optimizer)
+
     decay_scheduler = SCHEDULERS[decay_type](
         optimizer, **lr_scheduler_configs['decay']['kwargs']
     )
