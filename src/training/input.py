@@ -17,6 +17,9 @@ def parse_yml_config(filepath: str):
     # convert to list for easier argument passing later on
     if not isinstance(configs['data_args']['root'], list):
         configs['data_args']['root'] = [configs['data_args']['root']]
+    # in case no kwargs is passed
+    if configs['lr_schedulers']['decay']['kwargs'] is None:
+        configs['lr_schedulers']['decay']['kwargs'] = {}
 
     _validate_data_args(configs['data_args'])
     _validate_inout_args(configs['inout'])
