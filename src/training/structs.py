@@ -11,10 +11,7 @@ from datasets import FMA, GTZAN
 from spectrograms import Chromagram, LogFreqSpectrogram
 
 
-DATASETS = {
-    "fma": FMA,
-    "gtzan": GTZAN
-}
+DATASETS = {'fma': FMA, 'gtzan': GTZAN}
 
 FEATURE_TYPES = {
     'chroma': Chromagram,

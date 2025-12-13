@@ -18,10 +18,7 @@ from .structs import (
 from typing import Literal
 
 
-def build_dataset(
-    data_args: dict,
-    feat_args: dict
-) -> tuple[Subset, Subset]:
+def build_dataset(data_args: dict, feat_args: dict) -> tuple[Subset, Subset]:
     root = data_args['root'][-1]
     root = f"{root}/{os.listdir(root)[0]}"
     _, sr = librosa.load(f"{root}/{os.listdir(root)[0]}", sr=None, duration=1)
