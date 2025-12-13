@@ -32,6 +32,11 @@ def parse_args(parser: argparse.ArgumentParser):
         help="Whether to disable the logging to STDOUT when running training.",
         action='store_true'
     )
+    parser.add_argument(
+        '-d', '--device',
+        help="The available CUDA device.",
+        type=str, default="cuda"
+    )
     return parser.parse_args()
 
 
@@ -54,7 +59,7 @@ py_logger = setup_logger(__name__, f'logs/{timestamp}.log', to_stdout=True)
 args = parse_args(parser)
 py_logger.info(f"Parsing training configuration from {args.config_file}...")
 configs = parse_yml_config(args.config_file)
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = args.device if torch.cuda.is_available() else 'cpu'
 seed(configs['data_args']['seed'])
 
 # build dataset
