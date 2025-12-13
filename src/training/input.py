@@ -3,9 +3,10 @@ import os, yaml
 from .structs import (
     DATASETS,
     FEATURE_TYPES,
+    WINDOW_FUNCTIONS,
     OPTIMIZERS,
     OPTIMIZERS_8BIT,
-    WINDOW_FUNCTIONS,
+    SCHEDULERS
 )
 
 
@@ -110,8 +111,7 @@ def validate_training_args(training_args: dict):
         raise TypeError('epochs should be a positive integer!')
     elif training_args['epochs'] <= 0:
         raise ValueError(
-            'Found invalid value for epochs! '
-            'Please specify as a positive integer.'
+            'Found invalid value for epochs! Please specify as a positive integer.'
         )
 
     if not isinstance(training_args['batch_size'], int):
@@ -159,6 +159,33 @@ def validate_training_args(training_args: dict):
             'Please specify as a positive number.'
         )
 
+    scheduler_args = training_args['lr_schedulers']
+    if not isinstance(scheduler_args['warmup']['total_steps'], int):
+        raise TypeError(
+            "total_steps in warmup configuration should be a non-negative integer!"
+        )
+    elif scheduler_args['warmup']['total_steps'] < 0:
+        raise ValueError(
+            "Found negative value for total_steps in warmup configuration! "
+            "Please specify as a non-negative integer."
+        )
+
+    if not isinstance(scheduler_args['warmup']['start_factor'], (int, float)):
+        raise TypeError(
+            "start_factor in warmup configuration should "
+            "be a number in the range (0, 1)!"
+        )
+    elif not 0 < scheduler_args['warmup']['start_factor'] < 1:
+        raise ValueError(
+            "Found invalid value for start_factor in warmup configuration! "
+            "Please specify as a number in the range (0, 1)."
+        )
+
+    if scheduler_args['decay']['type'] not in SCHEDULERS:
+        raise ValueError(
+            f"Decay scheduler type should be one of: {list(SCHEDULERS.keys())}"
+        )
+
 def validate_inout_args(inout: dict):
     if not os.path.exists(inout['ckpt_dir']):
         os.makedirs(inout['ckpt_dir'])
@@ -171,15 +198,10 @@ def validate_inout_args(inout: dict):
 
     if inout['checkpoint'] == 'latest':
         ckpts = list(filter(
-            lambda path: path[-4:] == '.pth',
-            os.listdir(inout['ckpt_dir'])
+            lambda path: path[-4:] == '.pth', os.listdir(inout['ckpt_dir'])
         ))
         inout['checkpoint'] =  f"{inout['ckpt_dir']}/{ckpts[-1]}" if ckpts else ''
-    elif (
-        inout['checkpoint'] and
-        not os.path.exists(inout['checkpoint'])
-    ):
+    elif inout['checkpoint'] and not os.path.exists(inout['checkpoint']):
         raise FileNotFoundError(
-            "Checkpoint does not exist! "
-            "Please check if the given path is correct"
+            "Checkpoint does not exist! Please check if the given path is correct."
         )
