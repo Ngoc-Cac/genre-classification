@@ -75,8 +75,8 @@ py_logger.info("Preparing the model...")
 model, optimizer, lr_scheduler = build_model(
     train_set.dataset.num_genres,
     configs['inout']['model_path'],
-    configs['training_args']['optimizer'],
-    configs['training_args']['lr_schedulers'],
+    configs['optimizer'],
+    configs['lr_schedulers'],
     device=device,
     distirbuted_training=configs['training_args']['distributed_training']
 )
@@ -96,11 +96,11 @@ loss_fn = torch.nn.CrossEntropyLoss()
 
 # run training
 distributed = configs['training_args']['distributed_training']
-optimizer_type = configs['training_args']['optimizer']['type']
 total_epochs = configs['training_args']['epochs']
-lr = configs['training_args']['optimizer']['kwargs']['lr']
+optimizer_type = configs['optimizer']['type']
+lr = configs['optimizer']['kwargs']['lr']
 
-if configs['training_args']['optimizer']['use_8bit_optimizer']:
+if configs['optimizer']['use_8bit_optimizer']:
     optimizer_type = "8-bit " + optimizer_type
 py_logger.info(textwrap.dedent(f"""
     ========== RUNNING TRAINING WITH CONFIGURATIONS ==========

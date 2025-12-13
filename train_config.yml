@@ -8,6 +8,12 @@ data_args:
   first_n_secs: 20
   random_crops: 0
 
+inout:
+  model_path: model.yml
+  logdir: logs
+  ckpt_dir: your_checkpoint_dir
+  checkpoint: latest
+
 feature_args:
   feature_type: midi
   n_mels: 128
@@ -20,32 +26,29 @@ training_args:
   mixed_precision: false
   epochs: 100
   batch_size: 32
-  optimizer:
-    type: adamw
-    use_8bit_optimizer: false
-    kwargs:
-      lr: 1.0e-4
-      betas: [.9, .999]
-      weight_decay: .01
-  lr_schedulers:
-    warmup:
-      total_steps: 0
-      start_factor: 1e-7
-    decay:
-      ## this indicate no decay scheduler
-      type:
-      kwargs:
-      ## example of a linear decay schedule
-      # type: linear
-      # kwargs:
-      #   start_factor: 1
-      #   end_factor: 1e-5
 
-inout:
-  model_path: model.yml
-  logdir: logs
-  ckpt_dir: your_checkpoint_dir
-  checkpoint: latest
+optimizer:
+  type: adamw
+  use_8bit_optimizer: false
+  kwargs:
+    lr: 1.0e-4
+    betas: [.9, .999]
+    weight_decay: .01
+
+lr_schedulers:
+  warmup:
+    total_steps: 0
+    start_factor: 1e-7
+  decay:
+    ## this indicate no decay scheduler
+    type:
+    kwargs:
+    ## example of a linear decay schedule
+    # type: linear
+    # kwargs:
+    #   start_factor: 1
+    #   end_factor: 1e-5
+
 
 ### Description of parameters ###
 #################################
@@ -100,6 +103,8 @@ inout:
 #         will have the effective learning rate start at 1e-7.
 #     decay:
 #       type: The type of schedule to use for learning rate decay. If not used, leave empty.
+#           Current, there are four types of schedules available 'linear', 'cosine', 'exponential'
+#           and 'plateau' (PyTorch's ReduceLROnPlateau).
 #       kwargs: Other arguments to pass to the scheduler class, make sure that it supports these arguments
 #         For example, if a linear schedule is used, you may want to specify a start_factor and end_factor.
 #         start_factor: 1
