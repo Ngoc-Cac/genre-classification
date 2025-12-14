@@ -36,13 +36,12 @@ def _validate_data_args(data_args: dict):
         raise ValueError(f"Dataset type should be one of: {list(DATASETS.keys())}")
     elif data_args['type'] == 'fma' and len(data_args['root']) != 2:
         raise ValueError(
-            "Invalid 'root' argument for FMA dataset! "
-            "Specify as [metadata_root, audio_root]."
+            "Invalid 'root' argument for FMA dataset! Specify as [metadata_root, audio_root]."
         )
     elif not all(os.path.exists(p) for p in data_args['root']):
         raise FileNotFoundError(
-            "Cannot find the given root path! "
-            "Please check if the given path is correct."
+            "Cannot find the given root path! Please check if the "
+            "given path is correct."
         )
 
     if not isinstance(data_args['sampling_rate'], int):
@@ -50,26 +49,29 @@ def _validate_data_args(data_args: dict):
             raise TypeError("sampling_rate should be a positive integer")
     elif data_args['sampling_rate'] <= 0:
         raise ValueError(
-            "Found invalid value for sampling_rate! Please "
-            "specify as a positive integer."
+            "Found invalid value for sampling_rate! Please specify as "
+            "a positive integer."
         )
 
     if (data_args['type'] == 'fma'):
-        if not isinstance(data_args['subset_ratio'], float):
-            if data_args['subset_ratio'] is not None:
-                raise TypeError("subset_ratio should be a float between 0 and 1.")
+        if (
+            not isinstance(data_args['subset_ratio'], float) and
+            data_args['subset_ratio'] is not None
+        ):
+            raise TypeError("subset_ratio should be a float between 0 and 1.")
         elif not 0 <= data_args['subset_ratio'] <= 1:
             raise ValueError(
-                "Found invalid value for subset ratio! "
-                "Please specify as a number between 0 and 1."
+                "Found invalid value for subset ratio! Please specify as a "
+                "number between 0 and 1."
             )
 
     if not isinstance(data_args['train_ratio'], float):
-        raise TypeError('train_ratio should be a float between 0 and 1.')
+        if data_args['train_ratio'] is not None or data_args['type'] != 'fma':
+            raise TypeError('train_ratio should be a float between 0 and 1.')
     elif not 0 <= data_args['train_ratio'] <= 1:
         raise ValueError(
-            "Found invalid value for train_ratio! "
-            "Please specify as a number between 0 and 1."
+            "Found invalid value for train_ratio! Please specify as a number "
+            "between 0 and 1."
         )
 
     if not isinstance(data_args['first_n_secs'], (int, float)):
@@ -81,8 +83,8 @@ def _validate_data_args(data_args: dict):
         raise TypeError("random_crops must be a non-negative integer!")
     elif data_args['random_crops'] < 0:
         raise ValueError(
-            "Found invalid value for random_crops! "
-            "Please specify as a non-negative integer."
+            "Found invalid value for random_crops! Please specify as a "
+            "non-negative integer."
         )
 
 def _validate_feat_args(feat_args):

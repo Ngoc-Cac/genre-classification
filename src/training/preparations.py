@@ -43,7 +43,8 @@ def build_dataset(data_args: dict, feat_args: dict) -> tuple[Subset, Subset]:
         spec = spec_builder(wave).unflatten(0, (1, -1))
         if feat_type != 'mfcc':
             spec = amp_to_db(spec)
-        return (spec - spec.min()) / (spec.max() - spec.min())
+        return (spec - spec.mean()) / (spec.std() + 1e-6)
+        # return (spec - spec.min()) / (spec.max() - spec.min())
 
     kwargs = {
         "sampling_rate": data_args['sampling_rate'],
@@ -56,7 +57,10 @@ def build_dataset(data_args: dict, feat_args: dict) -> tuple[Subset, Subset]:
         *data_args['root'], data_args['first_n_secs'],
         data_args['random_crops'], **kwargs
     )
-    return dataset.random_split([data_args['train_ratio'], 1 - data_args['train_ratio']])
+    return dataset.random_split(
+        [data_args['train_ratio'], 1 - data_args['train_ratio']]
+        if data_args['train_ratio'] else None
+    )
 
 
 def build_model(
