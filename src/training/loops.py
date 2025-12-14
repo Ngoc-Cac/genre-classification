@@ -1,12 +1,17 @@
+import numpy as np
 import torch
 
-from typing import Callable, Literal, Any
+from sklearn.metrics import confusion_matrix
+
+from typing import Any, Callable, Literal, TypeAlias
+
+LOSS_FN_TYPE: TypeAlias = Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
 
 
 def train_loop(
     model: torch.nn.Module,
     dataloader: torch.utils.data.DataLoader,
-    loss_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+    loss_fn: LOSS_FN_TYPE,
     optimizer: torch.optim.Optimizer,
     gradient_scaler: torch.GradScaler,
     device: Literal['cpu', 'cuda'],
@@ -43,12 +48,15 @@ def train_loop(
 def eval_loop(
     model: torch.nn.Module,
     dataloader: torch.utils.data.DataLoader,
-    loss_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+    loss_fn: LOSS_FN_TYPE,
     device: Literal['cpu', 'cuda'],
     *,
-    mixed_precision: bool = False
-) -> tuple[float, float]:
-    test_loss, test_acc = 0, 0
+    mixed_precision: bool = False,
+    return_cm: bool = False
+) -> tuple[float, float, np.ndarray | None]:
+    test_loss = 0
+    all_preds, all_labels = [], []
+
     for data, labels in dataloader:
         labels = labels.to(device)
         with torch.autocast(
@@ -57,6 +65,16 @@ def eval_loop(
             enabled=mixed_precision
         ):
             preds = model(data.to(device))
-            test_loss += loss_fn(preds, labels).item()
-        test_acc += (labels == preds.argmax(dim=1)).sum().item()
-    return test_loss, test_acc
+            loss = loss_fn(preds, labels).item()
+
+        test_loss += loss
+        preds = preds.argmax(dim=1)
+
+        all_preds.append(preds.cpu())
+        all_labels.append(labels.cpu())
+
+    all_labels, all_preds = torch.concat(all_labels), torch.concat(all_preds)
+    return (
+        test_loss, (all_labels == all_preds).sum().item(),
+        confusion_matrix(all_labels, all_preds) if return_cm else None
+    )
