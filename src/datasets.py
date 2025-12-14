@@ -41,7 +41,7 @@ class _MGRDataset(Dataset):
 
     @property
     def id_to_genre(self):
-        return {i: genre for genre, i in self._genre_to_id.values()}
+        return {i: genre for genre, i in self._genre_to_id.items()}
 
     @property
     def num_genres(self):

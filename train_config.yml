@@ -67,7 +67,8 @@ lr_schedulers:
 #     dataset. The subset will be sampled in a stratified manner. If you want to
 #     include all audio files, leave empty.
 #   seed: seed for splitting data
-#   train_ratio: The train-test split ratio
+#   train_ratio: The train-test split ratio. You may leave this empty if dataset type is fma.
+#     In such case, the original split made by the authors will be used.
 #   first_n_secs: Whether to use only the first_n_secs of audio.
 #     Sepcify -1 to use all of the audio. You must make sure all audio have
 #     the same amount of samples
