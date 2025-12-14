@@ -2,7 +2,7 @@ import yaml
 
 from torch import nn
 
-from .structs import ACT_FN as _VALID_ACT_FNS
+from .structs import ACT_FN as _VALID_ACT_FNS, POOLING_TYPES
 from .blocks import Bottleneck, Conv2D, MLP
 
 from typing import get_args, Iterable, Literal, TypeAlias
@@ -36,8 +36,9 @@ def parse_model(
         build_backbone_net(
             backbone_conf['type'], input_channel,
             backbone_conf['inner_channels'],
-            backbone_conf['downsampling_rates'],
-            kernel_sizes, backbone_conf['activation']
+            backbone_conf['is_downsampled'],
+            kernel_sizes, backbone_conf['activation'],
+            pooling_type=backbone_conf['pooling_type']
         ),
         MLP(
             backbone_conf['inner_channels'][-1],
@@ -55,6 +56,8 @@ def build_backbone_net(
     downsampling_rates: Iterable[int],
     kernel_sizes: Iterable[int],
     activation_fn: _ACT_FN,
+    *,
+    pooling_type: Literal['max', 'average'] = 'average'
 ) -> nn.Module:
     backbone = nn.Sequential()
     layer_iter = zip(
@@ -62,24 +65,29 @@ def build_backbone_net(
         kernel_sizes, strict=True
     )
     for layer, configs in enumerate(layer_iter):
-        out_channels, downsampling_rate, kernel_size = configs
+        out_channels, downsample, kernel_size = configs
 
         if backbone_type == 'cnn':
             block_name = f'conv_{layer}'
             block = Conv2D(
-                in_channels, out_channels,
-                downsampling_rate, kernel_size,
+                in_channels, out_channels, kernel_size,
                 activation_fn=activation_fn
             )
         elif backbone_type == 'resnet':
             block_name = f'bottleneck_{layer}'
             block = Bottleneck(
                 in_channels, out_channels // in_channels,
-                kernel_size, stride=downsampling_rate,
+                kernel_size, stride=(2 if downsample else 1),
                 activation_fn=activation_fn
             )
 
         backbone.add_module(block_name, block)
+        if downsample and backbone_type == 'cnn':
+            backbone.add_module(
+                f"{pooling_type}_pooling_{layer}",
+                POOLING_TYPES[pooling_type](2)
+            )
+
         in_channels = out_channels
     return backbone
 
@@ -137,28 +145,21 @@ def _validate_model_config(model_config: dict):
 
     same_len = (
         len(backbone['inner_channels']) ==
-        len(backbone['downsampling_rates']) ==
+        len(backbone['is_downsampled']) ==
         len(kernel_sizes)
     )
     if not same_len:
         subject = (
-            "inner_channels" +
-            ("," if kernel_size_is_list else " and") +
-            " downsampling_rates" +
-            (" and kernel_size" if kernel_size_is_list else '')
+            "inner_channels" + ("," if kernel_size_is_list else " and") +
+            " is_downsampled" + (" and kernel_size" if kernel_size_is_list else "")
         )
-        lens = (len(backbone['inner_channels']), len(backbone['downsampling_rates']))
+        lens = (len(backbone['inner_channels']), len(backbone['is_downsampled']))
         if kernel_size_is_list:
             lens += (len(kernel_sizes),)
         raise ValueError(f"{subject} must have the same length! Found lengths: {lens}")
 
-    for chan, down_rate, kernel_size in zip(
-        backbone['inner_channels'],
-        backbone['downsampling_rates'],
-        kernel_sizes
-    ):
+    for chan, kernel_size in zip(backbone['inner_channels'], kernel_sizes):
         _validate_positive_int(chan, 'inner channel dimension')
-        _validate_positive_int(down_rate, 'downsampling rate')
         _validate_positive_int(kernel_size, 'kernel size')
 
     head = model_config['head']
