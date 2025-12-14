@@ -6,6 +6,15 @@ The aim of this project is to investigate different methods of
 feature engineering for audio data, as well as different models to perform
 classification on said feature representation.
 
+### Table of Contents
+- [**The Current State**](#the-current-state)
+- [**The Training Script**](#the-training-script)
+    - [**Dependencies**](#dependencies)
+    - [**Training Configurations**](#training-configurations)
+    - [**Run Training**](#run-training)
+    - [**See The Training Progress**](#see-the-training-progress)
+- [**About The Datasets**](#about-the-datasets)
+
 # The Current State
 As of now, this project is a work-in-progress and, thus, is not very well documented.
 So please excuse me for that.\
@@ -26,23 +35,45 @@ The project has currently implemented four different spectrogram features:
 There is a training script available at [`train.py`](./train.py), which encapsulates
 the data loading, feature extraction, model building, training and validation.
 
+## Dependencies
 To use the train script, install the necessary requirements:
 1. Python 3.13+
 2. `pip install -r requirements.txt`
 3. Appropriate installation of PyTorch with CUDA, see [here](https://pytorch.org/get-started/locally/).
 
+## Training Configurations
 Then, specify your training configuration in [`train_config.yml`](./train_config.yml).
+
+There are a variety of parameters you can configurate. Some of which are required, some of which
+are not. The details of what each parameter means/does is described at the very bottom of the file.
+
+Note that it is not required for you to use the exact same filename. In the case where you
+have multiple configurations you want to test out, you can specify them in different files
+with different filenames.
+
+## Run Training
 Finally, run training with:
 ```bash
 python train.py
 ```
+This will set everything up according to the configurations given in `train_config.yml`.
 
 You may also specify a different YAML configuration file with:
 ```bash
 python train.py -cf path_to_file
 ```
 
-## About The Dataset
+## See The Training Progress
+All metrics and hyperparameters are logged to [Tensorboard](https://www.tensorflow.org/tensorboard).
+
+During training (or even after training), you can view the reported metrics by running:
+```bash
+tensorboard --logdir path/to/your/ckpt_dir
+```
+and then visiting `http://localhost:6006`. This URL will also be logged to your stdout when running
+tensorboard, so you can also click there to get redirected instead.
+
+# About The Datasets
 This project currently uses two datasets:
 - The [GTZAN dataset](https://www.researchgate.net/publication/3333877_Musical_Genre_Classification_of_Audio_Signals).
     You can unzip the dataset by running the following command:
