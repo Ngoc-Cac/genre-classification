@@ -3,8 +3,9 @@ sys.path.append('src')
 
 import argparse, datetime, textwrap
 
-import torch, tqdm
+import matplotlib.pyplot as plt, torch, tqdm
 
+from sklearn.metrics import ConfusionMatrixDisplay
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
@@ -38,6 +39,25 @@ def parse_args(parser: argparse.ArgumentParser):
         type=str, default="cuda"
     )
     return parser.parse_args()
+
+
+def draw_cm(labels, preds) -> plt.Figure:
+    global test_set
+    fig = plt.figure(figsize=(6, 6))
+    ax = fig.add_subplot(111)
+    ConfusionMatrixDisplay.from_predictions(
+        labels, preds, ax=ax, xticks_rotation=45,
+        display_labels=test_set.dataset.id_to_genre.values()
+    )
+    return fig
+
+
+def log_train_step(step, loss):
+    global pbar, tb_logger, epoch, train_loader, postfix_dict
+    step = (epoch - 1) * len(train_loader) + step
+    postfix_dict['loss'] = loss
+    pbar.set_postfix(postfix_dict)
+    tb_logger.add_scalar('step/train_loss', loss, step)
 
 
 parser = argparse.ArgumentParser(
@@ -127,13 +147,6 @@ pbar = tqdm.tqdm(
     ),
     desc='Epoch'
 )
-def log_train_step(step, loss):
-    global pbar, tb_logger, epoch, train_loader, postfix_dict
-    step = (epoch - 1) * len(train_loader) + step
-    postfix_dict['loss'] = loss
-    pbar.set_postfix(postfix_dict)
-    tb_logger.add_scalar('step/train_loss', loss, step)
-
 postfix_dict = {'test_loss': None, 'test_acc': None}
 for epoch in pbar:
     model.train()
@@ -144,9 +157,9 @@ for epoch in pbar:
         callback_fn=log_train_step
     )
     model.eval()
-    test_loss, test_acc = eval_loop(
+    test_loss, test_acc, (labels, preds) = eval_loop(
         model, test_loader, loss_fn, device=device,
-        mixed_precision=mixed_prec
+        mixed_precision=mixed_prec, return_preds=True
     )
     lr_scheduler.step()
 
@@ -161,6 +174,9 @@ for epoch in pbar:
     )
     tb_logger.add_scalars(
         'epoch/accuracy', {'train': train_acc, 'test': test_acc}, epoch
+    )
+    tb_logger.add_figure(
+        'epoch/confusion_mat', draw_cm(labels, preds), epoch
     )
     tb_logger.flush()
 
