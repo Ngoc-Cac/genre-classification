@@ -1,7 +1,4 @@
-import numpy as np
 import torch
-
-from sklearn.metrics import confusion_matrix
 
 from typing import Any, Callable, Literal, TypeAlias
 
@@ -52,8 +49,8 @@ def eval_loop(
     device: Literal['cpu', 'cuda'],
     *,
     mixed_precision: bool = False,
-    return_cm: bool = False
-) -> tuple[float, float, np.ndarray | None]:
+    return_preds: bool = False
+) -> tuple[float, float, tuple[torch.Tensor, torch.Tensor]]:
     test_loss = 0
     all_preds, all_labels = [], []
 
@@ -76,5 +73,5 @@ def eval_loop(
     all_labels, all_preds = torch.concat(all_labels), torch.concat(all_preds)
     return (
         test_loss, (all_labels == all_preds).sum().item(),
-        confusion_matrix(all_labels, all_preds) if return_cm else None
+        (all_labels, all_preds) if return_preds else tuple()
     )
