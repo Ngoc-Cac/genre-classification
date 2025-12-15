@@ -41,14 +41,24 @@ def parse_args(parser: argparse.ArgumentParser):
     return parser.parse_args()
 
 
-def draw_cm(labels, preds) -> plt.Figure:
+def draw_cm(
+    labels: torch.Tensor,
+    preds: torch.Tensor,
+    cbar_offset: tuple[float, float] = (.02, .02)
+) -> plt.Figure:
     global test_set
-    fig = plt.figure(figsize=(6, 6))
-    ax = fig.add_subplot(111)
-    ConfusionMatrixDisplay.from_predictions(
-        labels, preds, ax=ax, xticks_rotation=45,
+    fig, ax = plt.subplots(figsize=(6, 6))
+
+    cmp = ConfusionMatrixDisplay.from_predictions(
+        labels, preds, ax=ax,
+        xticks_rotation=45, colorbar=False,
         display_labels=test_set.dataset.id_to_genre.values()
     )
+    cax = fig.add_axes([
+        ax.get_position().x1 + cbar_offset[0], ax.get_position().y0,
+        cbar_offset[1], ax.get_position().height
+    ])
+    plt.colorbar(cmp.im_,  cax=cax)
     return fig
 
 
