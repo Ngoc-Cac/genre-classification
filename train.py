@@ -134,6 +134,7 @@ distributed = configs['training_args']['distributed_training']
 total_epochs = configs['training_args']['epochs']
 optimizer_type = configs['optimizer']['type']
 lr = configs['optimizer']['kwargs']['lr']
+postfix_dict = {'test_loss': None, 'test_acc': None, 'loss': None}
 
 if configs['optimizer']['use_8bit_optimizer']:
     optimizer_type = "8-bit " + optimizer_type
@@ -155,9 +156,8 @@ pbar = tqdm.tqdm(
         range(1 + ckpt['epoch'], total_epochs + ckpt['epoch'] + 1)
         if configs['inout']['checkpoint'] else range(1, total_epochs + 1)
     ),
-    desc='Epoch'
+    postfix=postfix_dict, desc='Epoch'
 )
-postfix_dict = {'test_loss': None, 'test_acc': None}
 for epoch in pbar:
     model.train()
     train_loss, train_acc = train_loop(
