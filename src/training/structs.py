@@ -39,6 +39,7 @@ OPTIMIZERS_8BIT = None if not bnb else {
 SCHEDULERS = {
     'linear': torch.optim.lr_scheduler.LinearLR,
     'cosine': torch.optim.lr_scheduler.CosineAnnealingLR,
+    'cosine_w_restarts': torch.optim.lr_scheduler.CosineAnnealingWarmRestarts,
     'exponential': torch.optim.lr_scheduler.ExponentialLR,
     'plateau': torch.optim.lr_scheduler.ReduceLROnPlateau,
     None: lambda opt, **_: torch.optim.lr_scheduler.ConstantLR(opt, 1, 0)

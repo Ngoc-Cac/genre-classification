@@ -105,7 +105,7 @@ lr_schedulers:
 #     decay:
 #       type: The type of schedule to use for learning rate decay. If not used, leave empty.
 #           Current, there are four types of schedules available 'linear', 'cosine', 'exponential'
-#           and 'plateau' (PyTorch's ReduceLROnPlateau).
+#           'cosine_w_restarts' (cosine with warm restarts), and 'plateau' (PyTorch's ReduceLROnPlateau).
 #       kwargs: Other arguments to pass to the scheduler class, make sure that it supports these arguments
 #         For example, if a linear schedule is used, you may want to specify a start_factor and end_factor.
 #         start_factor: 1
