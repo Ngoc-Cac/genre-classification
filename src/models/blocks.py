@@ -2,9 +2,9 @@ import torch
 
 from torch import nn
 
-from .structs import ACT_FN, POOLING_TYPES
+from .structs import ACT_FN
 
-from typing import Literal, Iterable
+from typing import Iterable
 
 __all__ = (
     'Conv2D',
@@ -59,37 +59,30 @@ class Conv2D(nn.Module):
     def __init__(self,
         in_channels: int,
         out_channels: int,
-        downsampling_rate: int = 1,
         kernel_size: int = 3,
         *,
         activation_fn: str | nn.Module = 'relu',
         batch_norm: bool = True,
-        pooling_type: Literal['max', 'average'] = 'average'
     ):
         super().__init__()
 
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, padding=1)
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, padding='same')
         self.bn = nn.BatchNorm2d(out_channels) if batch_norm else nn.Identity()
         self.act_fn = (
             ACT_FN.get(activation_fn, nn.ReLU)()
             if isinstance(activation_fn, str) else activation_fn
         )
-        self.pool = POOLING_TYPES[pooling_type](
-            kernel_size, downsampling_rate, 1
-        ) if downsampling_rate > 1 else nn.Identity()
 
         self._repr = ["Conv2D(", "  (conv): " + repr(self.conv).replace('\n', '\n  ')]
         if batch_norm:
             self._repr.append("  (batch_norm): " + repr(self.bn).replace('\n', '\n  '))
         self._repr.append("  (activation): " + repr(self.act_fn).replace('\n', '\n  '))
-        if downsampling_rate > 1:
-            self._repr.append("  (pooling): " + repr(self.pool).replace('\n', '\n  '))
         self._repr.append(")")
         self._repr = '\n'.join(self._repr)
 
     def forward(self, x: torch.Tensor):
-        # conv -> bn -> act -> pool
-        return self.pool(self.act_fn(self.bn(self.conv(x))))
+        # conv -> bn -> act
+        return self.act_fn(self.bn(self.conv(x)))
 
     def __repr__(self):
         return self._repr

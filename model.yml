@@ -1,9 +1,10 @@
 backbone:
   type: cnn
   inner_channels: [64, 64, 64, 128, 128, 128, 256, 256, 256]
-  downsampling_rates: [2, 1, 1, 2, 1, 1, 2, 1, 1]
+  is_downsampled: [0, 0, 1, 0, 0, 1, 0, 0, 1]
   kernel_size: 3
   activation: relu
+  pooling_type: max
 
 head:
   hidden_dims: []
@@ -17,15 +18,19 @@ head:
 #   inner_channels: The desired channel dimension after each layer in the backbone.
 #     For example, [8, 16, 32] specifies that the feature map produced by the first
 #     layer of the backbone is 8, second layer is 16, etc. 
-#   downsampling_rates: The downsampling rate at each layer in the backbone.
-#     For example, [2, 1, 1] specifies that the feature map produced by the first
-#     layer of the backbone will be downsampled by 2 in its spatial dimension. For
-#     the layers afterward, the spatial dimension of the output feature map stays constant.
+#   is_downsampled: Whether or not the input signl is downsampled at this layer in the backbone.
+#     All downsampling will reduce the input feature map size by 2. For 'cnn', downsampling is performed
+#     using pooling. For 'resnet', downsampling is performed by a convolution with stride of 2.
+#     For example, [1, 0, 0] specifies that the feature map produced by the first
+#     layer of the backbone will be downsampled by 2. For the layers afterward, the spatial dimension
+#     of the output feature map stays constant.
 #   kernel_size: The kernel size to use for convolutions. If a positive integer is given,
 #     this will be used as the kernel size for all layers. If a list of integers is given,
 #     each layer will use the corresponding kernel size.
 #   activation: The activation function to use for all layers, choose between relu,
 #     elu, sigmoid and tanh.
+#   pooling_type: The type of pooling to use. This is only used for 'cnn' backbones. Choose between
+#   max and average.
 # head: This network takes in the extracted feature maps and perform classification.
 #   hidden_dims: The desired dimension of corresponding hidden layers in the clasification
 #     multi-layer perceptron. For example, [8, 16, 32, 32, 32] specifies that the network

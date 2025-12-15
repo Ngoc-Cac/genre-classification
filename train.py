@@ -1,10 +1,11 @@
 import sys
 sys.path.append('src')
 
-import argparse, datetime
+import argparse, datetime, textwrap
 
-import torch, tqdm
+import matplotlib.pyplot as plt, torch, tqdm
 
+from sklearn.metrics import ConfusionMatrixDisplay
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
@@ -20,27 +21,63 @@ def parse_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         '-cf', '--config_file',
         help="Path to the yaml file containing the training configuration.",
-        type=str,
-        default='train_config.yml'
+        type=str, default='train_config.yml'
     )
     parser.add_argument(
         '-nw', '--num_workers',
         help="The number of workers to use for data loading tasks.",
-        type=int,
-        default=0
+        type=int, default=0
     )
     parser.add_argument(
         '-nv', '--no_verbose',
         help="Whether to disable the logging to STDOUT when running training.",
         action='store_true'
     )
+    parser.add_argument(
+        '-d', '--device',
+        help="The available CUDA device.",
+        type=str, default="cuda"
+    )
     return parser.parse_args()
 
 
+def draw_cm(
+    labels: torch.Tensor,
+    preds: torch.Tensor,
+    cbar_offset: tuple[float, float] = (.02, .02)
+) -> plt.Figure:
+    global test_set
+    fig, ax = plt.subplots(figsize=(6, 6))
+
+    cmp = ConfusionMatrixDisplay.from_predictions(
+        labels, preds, ax=ax,
+        xticks_rotation=45, colorbar=False,
+        display_labels=test_set.dataset.id_to_genre.values()
+    )
+    cax = fig.add_axes([
+        ax.get_position().x1 + cbar_offset[0], ax.get_position().y0,
+        cbar_offset[1], ax.get_position().height
+    ])
+    plt.colorbar(cmp.im_,  cax=cax)
+    return fig
+
+
+def log_train_step(step, loss):
+    global pbar, tb_logger, epoch, train_loader, postfix_dict
+    step = (epoch - 1) * len(train_loader) + step
+    postfix_dict['loss'] = loss
+    pbar.set_postfix(postfix_dict)
+    tb_logger.add_scalar('step/train_loss', loss, step)
+
+
 parser = argparse.ArgumentParser(
-    description="""Training script for Music Genre Classification.
-The script will parse all training arguments from your configuration file
-and run training accordingly."""
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description=textwrap.dedent("""\
+              Music Genre Classification Training Script
+        ------------------------------------------------------
+        The script will parse all training arguments from your
+           configuration file and run training accordingly.
+    """)
 )
 now = datetime.datetime.now()
 timestamp = (
@@ -52,7 +89,7 @@ py_logger = setup_logger(__name__, f'logs/{timestamp}.log', to_stdout=True)
 args = parse_args(parser)
 py_logger.info(f"Parsing training configuration from {args.config_file}...")
 configs = parse_yml_config(args.config_file)
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = args.device if torch.cuda.is_available() else 'cpu'
 seed(configs['data_args']['seed'])
 
 # build dataset
@@ -60,55 +97,57 @@ py_logger.info("Preparing the dataset...")
 batch_size = configs['training_args']['batch_size']
 train_set, test_set = build_dataset(configs['data_args'], configs['feature_args'])
 train_loader, test_loader = DataLoader(
-    train_set, batch_size, drop_last=True, shuffle=True,
-    num_workers=args.num_workers, persistent_workers=args.num_workers
+    train_set, batch_size, shuffle=True,
+    drop_last=(len(train_set) % batch_size == 1),
+    num_workers=args.num_workers, persistent_workers=bool(args.num_workers)
 ), DataLoader(
-    test_set, batch_size, drop_last=True,
-    num_workers=args.num_workers, persistent_workers=args.num_workers
+    test_set, batch_size,
+    num_workers=args.num_workers, persistent_workers=bool(args.num_workers)
 )
 
 # build model
 py_logger.info("Preparing the model...")
-model, optimizer = build_model(
-    len(train_set.dataset._genre_to_id),
+model, optimizer, lr_scheduler = build_model(
+    train_set.dataset.num_genres,
     configs['inout']['model_path'],
-    configs['training_args']['optimizer'],
+    configs['optimizer'],
+    configs['lr_schedulers'],
     device=device,
     distirbuted_training=configs['training_args']['distributed_training']
 )
 
-gradient_scaler = torch.amp.grad_scaler.GradScaler(enabled=configs['training_args']['mixed_precision'])
+mixed_prec = configs['training_args']['mixed_precision']
+gradient_scaler = torch.amp.grad_scaler.GradScaler(enabled=mixed_prec)
 
 if configs['inout']['checkpoint']:
     ckpt = torch.load(configs['inout']['checkpoint'], weights_only=True)
     model.load_state_dict(ckpt['model'])
     optimizer.load_state_dict(ckpt['optimizer'])
     gradient_scaler.load_state_dict(ckpt['gradient_scaler'])
+    lr_scheduler.load_state_dict(ckpt['lr_scheduler'])
 
 loss_fn = torch.nn.CrossEntropyLoss()
 
 
 # run training
-mixed_prec = configs['training_args']['mixed_precision']
 distributed = configs['training_args']['distributed_training']
-optimizer_type = configs['training_args']['optimizer']['type']
 total_epochs = configs['training_args']['epochs']
-lr = configs['training_args']['optimizer']['kwargs']['lr']
+optimizer_type = configs['optimizer']['type']
+lr = configs['optimizer']['kwargs']['lr']
+postfix_dict = {'test_loss': None, 'test_acc': None, 'loss': None}
 
-if configs['training_args']['optimizer']['use_8bit_optimizer']:
+if configs['optimizer']['use_8bit_optimizer']:
     optimizer_type = "8-bit " + optimizer_type
-py_logger.info(f"""
-========== RUNNING TRAINING WITH CONFIGURATIONS ==========
-Distributed training: {distributed}
-Mixed-precision: {mixed_prec}
-Total training | testing samples: {len(train_set)} | {len(test_set)}
-Total batches per epoch: {len(train_loader)}
-Epochs: {total_epochs}
-Batch size: {batch_size}
-Learning rate: {lr}
-Optimizer: {optimizer_type}
-=========================================================="""
-)
+py_logger.info(textwrap.dedent(f"""
+    ========== RUNNING TRAINING WITH CONFIGURATIONS ==========
+    Distributed training: {distributed} | Mixed-precision: {mixed_prec}
+    Total training | testing samples: {len(train_set)} | {len(test_set)}
+    Total batches per epoch: {len(train_loader)}
+    Total Epochs: {total_epochs}
+    Batch size: {batch_size} | Initial Learning rate: {lr}
+    Optimizer: {optimizer_type}
+    ==========================================================
+"""))
 tb_logger = SummaryWriter(
     f"{configs['inout']['ckpt_dir']}/{configs['inout']['logdir']}"
 )
@@ -117,16 +156,8 @@ pbar = tqdm.tqdm(
         range(1 + ckpt['epoch'], total_epochs + ckpt['epoch'] + 1)
         if configs['inout']['checkpoint'] else range(1, total_epochs + 1)
     ),
-    desc='Epoch'
+    postfix=postfix_dict, desc='Epoch'
 )
-def log_train_step(step, loss):
-    global pbar, tb_logger, epoch, train_loader, prev_loss, lr
-    step = (epoch - 1) * len(train_loader) + step
-    pbar.set_postfix({'loss': loss, 'test_loss': prev_loss})
-    tb_logger.add_scalar('step/train_loss', loss, step)
-    tb_logger.add_scalar('step/learning_rate', lr, step)
-
-prev_loss = None
 for epoch in pbar:
     model.train()
     train_loss, train_acc = train_loop(
@@ -136,21 +167,26 @@ for epoch in pbar:
         callback_fn=log_train_step
     )
     model.eval()
-    test_loss, test_acc = eval_loop(
+    test_loss, test_acc, (labels, preds) = eval_loop(
         model, test_loader, loss_fn, device=device,
-        mixed_precision=mixed_prec
+        mixed_precision=mixed_prec, return_preds=True
     )
+    lr_scheduler.step()
 
     train_loss = train_loss / len(train_loader)
-    prev_loss = test_loss = test_loss / len(test_loader)
     train_acc = train_acc / len(train_set)
-    test_acc = test_acc / len(test_set)
+    postfix_dict['test_loss'] = test_loss = test_loss / len(test_loader)
+    postfix_dict['test_acc'] = test_acc = test_acc / len(test_set)
 
+    tb_logger.add_scalar('epoch/lr', lr_scheduler.get_last_lr()[0], epoch)
     tb_logger.add_scalars(
         'epoch/loss', {'train': train_loss, 'test': test_loss}, epoch
     )
     tb_logger.add_scalars(
         'epoch/accuracy', {'train': train_acc, 'test': test_acc}, epoch
+    )
+    tb_logger.add_figure(
+        'epoch/confusion_mat', draw_cm(labels, preds), epoch
     )
     tb_logger.flush()
 
@@ -172,7 +208,8 @@ torch.save(
         'epoch': epoch,
         'model': model.state_dict(),
         'optimizer': optimizer.state_dict(),
-        'gradient_scaler': gradient_scaler.state_dict()
+        'gradient_scaler': gradient_scaler.state_dict(),
+        'lr_scheduler': lr_scheduler.state_dict()
     },
     f"{configs['inout']['ckpt_dir']}/{timestamp}.pth"
 )

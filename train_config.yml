@@ -8,6 +8,12 @@ data_args:
   first_n_secs: 20
   random_crops: 0
 
+inout:
+  model_path: model.yml
+  logdir: logs
+  ckpt_dir: your_checkpoint_dir
+  checkpoint: latest
+
 feature_args:
   feature_type: midi
   n_mels: 128
@@ -20,19 +26,29 @@ training_args:
   mixed_precision: false
   epochs: 100
   batch_size: 32
-  optimizer:
-    type: adamw
-    use_8bit_optimizer: false
-    kwargs:
-      lr: 1.0e-4
-      betas: [.9, .999]
-      weight_decay: .01
 
-inout:
-  model_path: model.yml
-  logdir: logs
-  ckpt_dir: your_checkpoint_dir
-  checkpoint: latest
+optimizer:
+  type: adamw
+  use_8bit_optimizer: false
+  kwargs:
+    lr: 1.0e-4
+    betas: [.9, .999]
+    weight_decay: .01
+
+lr_schedulers:
+  warmup:
+    total_steps: 0
+    start_factor: 1e-7
+  decay:
+    ## this indicate no decay scheduler
+    type:
+    kwargs:
+    ## example of a linear decay schedule
+    # type: linear
+    # kwargs:
+    #   start_factor: 1
+    #   end_factor: 1e-5
+
 
 ### Description of parameters ###
 #################################
@@ -51,7 +67,8 @@ inout:
 #     dataset. The subset will be sampled in a stratified manner. If you want to
 #     include all audio files, leave empty.
 #   seed: seed for splitting data
-#   train_ratio: The train-test split ratio
+#   train_ratio: The train-test split ratio. You may leave this empty if dataset type is fma.
+#     In such case, the original split made by the authors will be used.
 #   first_n_secs: Whether to use only the first_n_secs of audio.
 #     Sepcify -1 to use all of the audio. You must make sure all audio have
 #     the same amount of samples
@@ -75,10 +92,25 @@ inout:
 #   optimizer:
 #     type: Choose between adam, adamw and sgd
 #     use_8bit_optimizer: Whether or not to use 8bit-optimization
-#     kwargs: other arguments for the optimizers, make sure that your optimizer support this argument
+#     kwargs: other arguments for the optimizers, make sure that your optimizer support these arguments
 #       lr: learning rate is one argument, this is also required for all optimizers
 #       weight_decay: another example
 #       ...: ...
+#   lr_schedulers:
+#     warmup:
+#       total_steps: The total number of warmup steps (in epochs). If not used, you can set to 0.
+#       start_factor: The starting factor of the initial learning rate to warmup from.
+#         For example, an initial learning rate of 1e-4 with a warmup start factor of 1e-3
+#         will have the effective learning rate start at 1e-7.
+#     decay:
+#       type: The type of schedule to use for learning rate decay. If not used, leave empty.
+#           Current, there are four types of schedules available 'linear', 'cosine', 'exponential'
+#           'cosine_w_restarts' (cosine with warm restarts), and 'plateau' (PyTorch's ReduceLROnPlateau).
+#       kwargs: Other arguments to pass to the scheduler class, make sure that it supports these arguments
+#         For example, if a linear schedule is used, you may want to specify a start_factor and end_factor.
+#         start_factor: 1
+#         end_factor: 1e-5
+#         ...
 # inout:
 #   model_path: Path to model building configuration file. See model.yml for an example.
 #   logdir: A directory with this name will be created in ckpt_dir

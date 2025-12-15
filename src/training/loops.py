@@ -1,12 +1,14 @@
 import torch
 
-from typing import Callable, Literal, Any
+from typing import Any, Callable, Literal, TypeAlias
+
+LOSS_FN_TYPE: TypeAlias = Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
 
 
 def train_loop(
     model: torch.nn.Module,
-    train_loader: torch.utils.data.DataLoader,
-    loss_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+    dataloader: torch.utils.data.DataLoader,
+    loss_fn: LOSS_FN_TYPE,
     optimizer: torch.optim.Optimizer,
     gradient_scaler: torch.GradScaler,
     device: Literal['cpu', 'cuda'],
@@ -17,7 +19,7 @@ def train_loop(
     if callback_fn is None:
         callback_fn = lambda *args: None
     train_loss, train_acc = 0, 0
-    for step, (data, labels) in enumerate(train_loader):
+    for step, (data, labels) in enumerate(dataloader):
         labels = labels.to(device)
         with torch.autocast(
             device_type=device,
@@ -42,14 +44,17 @@ def train_loop(
 @torch.no_grad()
 def eval_loop(
     model: torch.nn.Module,
-    test_loader: torch.utils.data.DataLoader,
-    loss_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+    dataloader: torch.utils.data.DataLoader,
+    loss_fn: LOSS_FN_TYPE,
     device: Literal['cpu', 'cuda'],
     *,
-    mixed_precision: bool = False
-) -> tuple[float, float]:
-    test_loss, test_acc = 0, 0
-    for data, labels in test_loader:
+    mixed_precision: bool = False,
+    return_preds: bool = False
+) -> tuple[float, float, tuple[torch.Tensor, torch.Tensor]]:
+    test_loss = 0
+    all_preds, all_labels = [], []
+
+    for data, labels in dataloader:
         labels = labels.to(device)
         with torch.autocast(
             device_type=device,
@@ -57,6 +62,16 @@ def eval_loop(
             enabled=mixed_precision
         ):
             preds = model(data.to(device))
-            test_loss += loss_fn(preds, labels).item()
-        test_acc += (labels == preds.argmax(dim=1)).sum().item()
-    return test_loss, test_acc
+            loss = loss_fn(preds, labels).item()
+
+        test_loss += loss
+        preds = preds.argmax(dim=1)
+
+        all_preds.append(preds.cpu())
+        all_labels.append(labels.cpu())
+
+    all_labels, all_preds = torch.concat(all_labels), torch.concat(all_preds)
+    return (
+        test_loss, (all_labels == all_preds).sum().item(),
+        (all_labels, all_preds) if return_preds else tuple()
+    )
