@@ -1,6 +1,6 @@
 import os, warnings
-import librosa
 import torch
+import torchaudio
 
 from torch.utils.data import Subset
 from torchaudio.transforms import AmplitudeToDB
@@ -24,7 +24,7 @@ def build_dataset(data_args: dict, feat_args: dict) -> tuple[Subset, Subset]:
     else:
         root = data_args['root'][-1]
         root = f"{root}/{os.listdir(root)[0]}"
-        _, sr = librosa.load(f"{root}/{os.listdir(root)[0]}", sr=None, duration=1)
+        _, sr = torchaudio.load(f"{root}/{os.listdir(root)[0]}")
 
     feat_type = feat_args['feature_type']
     kwargs = {
@@ -40,7 +40,7 @@ def build_dataset(data_args: dict, feat_args: dict) -> tuple[Subset, Subset]:
     amp_to_db = AmplitudeToDB(top_db=80)
     def build_feat(wave, _):
         # don't convert to log scale if already mfcc
-        spec = spec_builder(wave).unflatten(0, (1, -1))
+        spec = spec_builder(wave)
         if feat_type != 'mfcc':
             spec = amp_to_db(spec)
         return (spec - spec.mean()) / (spec.std() + 1e-6)
