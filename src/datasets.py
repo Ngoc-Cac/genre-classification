@@ -2,8 +2,8 @@ import os
 import itertools
 
 import pandas as pd
-import librosa
 import torch
+import torchaudio
 
 from sklearn.model_selection import train_test_split
 from torch.utils.data import random_split, Dataset, Subset
@@ -65,19 +65,25 @@ class _MGRDataset(Dataset):
     def _build_cache(self, index: int):
         file_index = index // self._rand_crops if self._rand_crops else index
         file, genre = self._audios[file_index]
-        wave, sr = librosa.load(file, mono=True, sr=self._sr)
+        wf, sr = torchaudio.load(file)
+        if self._sr:
+            wf = torchaudio.functional.resample(wf, sr, self._sr)
+            sr = self._sr
+        if wf.shape[0] == 2:
+            # average to mono if stereo
+            wf = wf.mean(dim=0, keepdim=True)
 
         if self._rand_crops and self._n_secs > 0:
             index = file_index * self._rand_crops
             for i in range(index, index + self._rand_crops):
                 self._data_cache[i] = self._preprocessor(
-                    torch.tensor(crop_signal(wave, sr, self._n_secs)), sr
+                    crop_signal(wf, sr, self._n_secs), sr
                 )
                 self._label_cache[i] = self._genre_to_id[genre]
         else:
             if self._n_secs > 0:
-                wave = crop_signal(wave, sr, self._n_secs, 0)
-            self._data_cache[index] = self._preprocessor(torch.tensor(wave), sr)
+                wf = crop_signal(wf, sr, self._n_secs, 0)
+            self._data_cache[index] = self._preprocessor(wf, sr)
             self._label_cache[index] = self._genre_to_id[genre]
 
     def __len__(self) -> int:
