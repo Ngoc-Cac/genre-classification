@@ -53,13 +53,10 @@ def _validate_data_args(data_args: dict):
             "a positive integer."
         )
 
-    if (data_args['type'] == 'fma'):
-        if (
-            not isinstance(data_args['subset_ratio'], float) and
-            data_args['subset_ratio'] is not None
-        ):
+    if data_args['type'] == 'fma' and data_args['subset_ratio'] is not None:
+        if not isinstance(data_args['subset_ratio'], float):
             raise TypeError("subset_ratio should be a float between 0 and 1.")
-        elif not 0 <= data_args['subset_ratio'] <= 1:
+        elif not 0 < data_args['subset_ratio'] < 1:
             raise ValueError(
                 "Found invalid value for subset ratio! Please specify as a "
                 "number between 0 and 1."
