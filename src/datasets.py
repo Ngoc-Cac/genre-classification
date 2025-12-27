@@ -30,7 +30,7 @@ class _MGRDataset(Dataset):
         self._rand_crops = int(random_crops)
         self._sr = sampling_rate
 
-        self._id_to_genre = list(genres)
+        self._id_to_genre = tuple(genres)
         self._genre_to_id = {genre: i for i, genre in enumerate(set(self._id_to_genre))}
         self._audios = tuple(zip(audio_files, genres, strict=True))
         self._size = len(self._audios) * (self._rand_crops if self._rand_crops else 1)
@@ -41,7 +41,7 @@ class _MGRDataset(Dataset):
 
     @property
     def id_to_genre(self):
-        return list(self._id_to_genre)
+        return self._id_to_genre
 
     @property
     def num_genres(self):
