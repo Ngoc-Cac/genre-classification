@@ -1,3 +1,6 @@
+# pyright configuration
+pyrightconfig.json
+
 # cache
 __pycache__/
 
