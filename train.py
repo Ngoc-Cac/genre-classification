@@ -5,7 +5,10 @@ import argparse, datetime, textwrap
 
 import matplotlib.pyplot as plt, torch, tqdm
 
-from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.metrics import (
+    classification_report,
+    ConfusionMatrixDisplay
+)
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
@@ -104,11 +107,12 @@ train_loader, test_loader = DataLoader(
     test_set, batch_size,
     num_workers=args.num_workers, persistent_workers=bool(args.num_workers)
 )
+id_to_genre = train_set.dataset.num_genres
 
 # build model
 py_logger.info("Preparing the model...")
 model, optimizer, lr_scheduler = build_model(
-    train_set.dataset.num_genres,
+    id_to_genre,
     configs['inout']['model_path'],
     configs['optimizer'],
     configs['lr_schedulers'],
@@ -167,7 +171,7 @@ for epoch in pbar:
         callback_fn=log_train_step
     )
     model.eval()
-    test_loss, test_acc, (labels, preds) = eval_loop(
+    test_loss, test_acc, tru_pred = eval_loop(
         model, test_loader, loss_fn, device=device,
         mixed_precision=mixed_prec, return_preds=True
     )
@@ -186,7 +190,11 @@ for epoch in pbar:
         'epoch/accuracy', {'train': train_acc, 'test': test_acc}, epoch
     )
     tb_logger.add_figure(
-        'epoch/confusion_mat', draw_cm(labels, preds), epoch
+        'epoch/confusion_mat', draw_cm(*tru_pred), epoch
+    )
+    tb_logger.add_text(
+        'epoch/report',
+        classification_report(*tru_pred, target_names=id_to_genre)
     )
     tb_logger.flush()
 
