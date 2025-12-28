@@ -3,7 +3,7 @@ import yaml
 from torch import nn
 
 from .structs import ACT_FN as _VALID_ACT_FNS, POOLING_TYPES
-from .blocks import Bottleneck, Conv2D, MLP
+from .blocks import Bottleneck, Conv1D, Conv2D, MLP
 
 from typing import get_args, Iterable, Literal, TypeAlias
 
@@ -18,7 +18,8 @@ _ACT_FN: TypeAlias = Literal[*_VALID_ACT_FNS]
 def parse_model(
     config_file: str,
     input_channel: int,
-    num_classes: int
+    num_classes: int,
+    use_1d_conv: bool = False,
 ) -> tuple[nn.Module, nn.Module]:
     with open(config_file, encoding='utf-8') as config_file:
         model_config = yaml.safe_load(config_file)
@@ -38,6 +39,7 @@ def parse_model(
             backbone_conf['inner_channels'],
             backbone_conf['is_downsampled'],
             kernel_sizes, backbone_conf['activation'],
+            use_1d_conv=use_1d_conv,
             pooling_type=backbone_conf['pooling_type']
         ),
         MLP(
@@ -57,9 +59,11 @@ def build_backbone_net(
     kernel_sizes: Iterable[int],
     activation_fn: _ACT_FN,
     *,
-    pooling_type: Literal['max', 'average'] = 'average'
+    use_1d_conv: bool = False,
+    pooling_type: Literal['max', 'average'] = 'average',
 ) -> nn.Module:
     backbone = nn.Sequential()
+    conv = Conv1D if use_1d_conv else Conv2D
     layer_iter = zip(
         inner_channels, downsampling_rates,
         kernel_sizes, strict=True
@@ -69,7 +73,7 @@ def build_backbone_net(
 
         if backbone_type == 'cnn':
             block_name = f'conv_{layer}'
-            block = Conv2D(
+            block = conv(
                 in_channels, out_channels, kernel_size,
                 activation_fn=activation_fn
             )
@@ -173,7 +177,7 @@ def _validate_model_config(model_config: dict):
     if not same_len:
         lens = [len(head['hidden_dims']), len(head['dropout_probs'])]
         if kernel_size_is_list:
-            lens += len(kernel_sizes)
+            lens.append(len(kernel_sizes))
         raise ValueError(
             "hidden_dims and dropout_probs must have "
             f"the same length! Found lengths: {lens}"
