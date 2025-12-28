@@ -163,14 +163,12 @@ pbar = tqdm.tqdm(
     postfix=postfix_dict, desc='Epoch'
 )
 for epoch in pbar:
-    model.train()
     train_loss, train_acc = train_loop(
         model, train_loader, loss_fn,
         optimizer, gradient_scaler, device,
         mixed_precision=mixed_prec,
         callback_fn=log_train_step
     )
-    model.eval()
     test_loss, test_acc, tru_pred = eval_loop(
         model, test_loader, loss_fn, device=device,
         mixed_precision=mixed_prec, return_preds=True
