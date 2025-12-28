@@ -73,6 +73,22 @@ def log_train_step(step, loss):
     tb_logger.add_scalar('step/train_loss', loss, step)
 
 
+now = datetime.datetime.now()
+timestamp = (
+    f"{(now.year % 100):0>2}{now.month:0>2}{now.day:0>2}-"
+    f"{now.hour:0>2}{now.minute:0>2}{now.second:0>2}"
+)
+py_logger = setup_logger(__name__, f'logs/{timestamp}.log', to_stdout=True)
+
+# set up except hook to handle any exceptions while running the event loop
+def except_hook(exc_type, exc_value, exc_tb):
+    py_logger.critical(
+        'Program exited due to exception:',
+        exc_info=(exc_type, exc_value, exc_tb)
+    )
+    sys.exit(1)
+sys.excepthook = except_hook
+
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description=textwrap.dedent("""\
@@ -82,14 +98,8 @@ parser = argparse.ArgumentParser(
            configuration file and run training accordingly.
     """)
 )
-now = datetime.datetime.now()
-timestamp = (
-    f"{(now.year % 100):0>2}{now.month:0>2}{now.day:0>2}-"
-    f"{now.hour:0>2}{now.minute:0>2}{now.second:0>2}"
-)
-py_logger = setup_logger(__name__, f'logs/{timestamp}.log', to_stdout=True)
-
 args = parse_args(parser)
+
 py_logger.info(f"Parsing training configuration from {args.config_file}...")
 configs = parse_yml_config(args.config_file)
 device = args.device if torch.cuda.is_available() else 'cpu'
