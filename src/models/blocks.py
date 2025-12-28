@@ -55,6 +55,40 @@ class MLP(nn.Module):
         return self._repr
 
 
+class Conv1D(nn.Module):
+    def __init__(self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int = 3,
+        *,
+        activation_fn: str | nn.Module = 'relu',
+        batch_norm: bool = True,
+    ):
+        super().__init__()
+
+        self.conv = nn.Conv1d(in_channels, out_channels, kernel_size, padding='same')
+        self.bn = nn.BatchNorm1d(out_channels) if batch_norm else nn.Identity()
+        self.act_fn = (
+            ACT_FN.get(activation_fn, nn.ReLU)()
+            if isinstance(activation_fn, str) else activation_fn
+        )
+
+        reprs = ["Conv2D(", "  (conv): " + repr(self.conv).replace('\n', '\n  ')]
+        if batch_norm:
+            reprs.append("  (batch_norm): " + repr(self.bn).replace('\n', '\n  '))
+        reprs.append("  (activation): " + repr(self.act_fn).replace('\n', '\n  '))
+        reprs.append(")")
+
+        self._repr = '\n'.join(reprs)
+
+    def forward(self, x: torch.Tensor):
+        # conv -> bn -> act
+        return self.act_fn(self.bn(self.conv(x)))
+
+    def __repr__(self):
+        return self._repr
+
+
 class Conv2D(nn.Module):
     def __init__(self,
         in_channels: int,
@@ -73,12 +107,13 @@ class Conv2D(nn.Module):
             if isinstance(activation_fn, str) else activation_fn
         )
 
-        self._repr = ["Conv2D(", "  (conv): " + repr(self.conv).replace('\n', '\n  ')]
+        reprs = ["Conv2D(", "  (conv): " + repr(self.conv).replace('\n', '\n  ')]
         if batch_norm:
-            self._repr.append("  (batch_norm): " + repr(self.bn).replace('\n', '\n  '))
-        self._repr.append("  (activation): " + repr(self.act_fn).replace('\n', '\n  '))
-        self._repr.append(")")
-        self._repr = '\n'.join(self._repr)
+            reprs.append("  (batch_norm): " + repr(self.bn).replace('\n', '\n  '))
+        reprs.append("  (activation): " + repr(self.act_fn).replace('\n', '\n  '))
+        reprs.append(")")
+
+        self._repr = '\n'.join(reprs)
 
     def forward(self, x: torch.Tensor):
         # conv -> bn -> act
