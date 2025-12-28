@@ -55,7 +55,7 @@ def draw_cm(
     cmp = ConfusionMatrixDisplay.from_predictions(
         labels, preds, ax=ax,
         xticks_rotation=45, colorbar=False,
-        display_labels=test_set.dataset.id_to_genre.values()
+        display_labels=test_set.dataset.id_to_genre
     )
     cax = fig.add_axes([
         ax.get_position().x1 + cbar_offset[0], ax.get_position().y0,
@@ -107,12 +107,12 @@ train_loader, test_loader = DataLoader(
     test_set, batch_size,
     num_workers=args.num_workers, persistent_workers=bool(args.num_workers)
 )
-id_to_genre = train_set.dataset.num_genres
+id_to_genre = train_set.dataset.id_to_genre
 
 # build model
 py_logger.info("Preparing the model...")
 model, optimizer, lr_scheduler = build_model(
-    id_to_genre,
+    len(id_to_genre),
     configs['inout']['model_path'],
     configs['optimizer'],
     configs['lr_schedulers'],
@@ -192,7 +192,9 @@ for epoch in pbar:
     )
     tb_logger.add_text(
         'epoch/report',
-        classification_report(*tru_pred, target_names=id_to_genre)
+        classification_report(
+            *tru_pred, target_names=id_to_genre, zero_division=0.0
+        )
     )
     tb_logger.flush()
 
