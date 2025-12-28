@@ -209,6 +209,10 @@ tb_logger.add_hparams(
 )
 
 tb_logger.close()
+
+if distributed:
+    # unwrap the model if distributed before checkpointing
+    model = model.module
 torch.save(
     {
         'epoch': epoch,
