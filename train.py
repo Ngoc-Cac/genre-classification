@@ -98,8 +98,8 @@ parser = argparse.ArgumentParser(
            configuration file and run training accordingly.
     """)
 )
-args = parse_args(parser)
 
+args = parse_args(parser)
 py_logger.info(f"Parsing training configuration from {args.config_file}...")
 configs = parse_yml_config(args.config_file)
 device = args.device if torch.cuda.is_available() else 'cpu'
@@ -126,6 +126,7 @@ model, optimizer, lr_scheduler = build_model(
     configs['inout']['model_path'],
     configs['optimizer'],
     configs['lr_schedulers'],
+    freq_as_channel=configs['feature_args']['freq_as_channel'],
     device=device,
     distirbuted_training=configs['training_args']['distributed_training']
 )
