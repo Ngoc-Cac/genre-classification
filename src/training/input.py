@@ -109,6 +109,12 @@ def _validate_feat_args(feat_args):
     if feat_args['window_type'] not in WINDOW_FUNCTIONS:
         raise ValueError(f"window_type should be one of : {list(WINDOW_FUNCTIONS.keys())}")
 
+    if not isinstance(feat_args['freq_as_channel'], bool):
+        raise TypeError(
+            "freq_as_channel should be a bool! "
+            "Please specify as either true or false."
+        )
+
 def _validate_inout_args(inout: dict):
     if not os.path.exists(inout['ckpt_dir']):
         os.makedirs(inout['ckpt_dir'])

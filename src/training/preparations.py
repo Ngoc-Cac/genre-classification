@@ -41,6 +41,8 @@ def build_dataset(data_args: dict, feat_args: dict) -> tuple[Subset, Subset]:
     def build_feat(wave, _):
         # don't convert to log scale if already mfcc
         spec = spec_builder(wave)
+        if feat_args['freq_as_channel']:
+            spec = spec[0]
         if feat_type != 'mfcc':
             spec = amp_to_db(spec)
         return (spec - spec.mean()) / (spec.std() + 1e-6)
@@ -69,10 +71,15 @@ def build_model(
     optimizer_args: dict,
     lr_scheduler_configs: dict,
     *,
+    freq_as_channel: bool = False,
     device: Literal['cuda', 'cpu'] = 'cpu',
     distirbuted_training: bool = False
 ) -> tuple[GenreClassifier, torch.optim.Optimizer, torch.optim.lr_scheduler.LRScheduler]:
-    model = GenreClassifier(1, num_labels, model_config_file).to(device)
+    model = GenreClassifier(
+        1, num_labels, model_config_file,
+        freq_as_channel=freq_as_channel
+    ).to(device)
+
     if distirbuted_training:
         if torch.cuda.device_count() > 1:
             model = torch.nn.DataParallel(model)
