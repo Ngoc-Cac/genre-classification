@@ -64,6 +64,7 @@ def build_backbone_net(
 ) -> nn.Module:
     backbone = nn.Sequential()
     conv = Conv1D if use_1d_conv else Conv2D
+    pooling = POOLING_TYPES[pooling_type][1 if use_1d_conv else 2]
     layer_iter = zip(
         inner_channels, downsampling_rates,
         kernel_sizes, strict=True
@@ -89,7 +90,7 @@ def build_backbone_net(
         if downsample and backbone_type == 'cnn':
             backbone.add_module(
                 f"{pooling_type}_pooling_{layer}",
-                POOLING_TYPES[pooling_type](2)
+                pooling(2)
             )
 
         in_channels = out_channels

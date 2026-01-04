@@ -73,7 +73,7 @@ class Conv1D(nn.Module):
             if isinstance(activation_fn, str) else activation_fn
         )
 
-        reprs = ["Conv2D(", "  (conv): " + repr(self.conv).replace('\n', '\n  ')]
+        reprs = ["Conv1D(", "  (conv): " + repr(self.conv).replace('\n', '\n  ')]
         if batch_norm:
             reprs.append("  (batch_norm): " + repr(self.bn).replace('\n', '\n  '))
         reprs.append("  (activation): " + repr(self.act_fn).replace('\n', '\n  '))
