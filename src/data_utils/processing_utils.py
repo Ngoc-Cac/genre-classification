@@ -3,6 +3,23 @@ import random
 from numpy.typing import ArrayLike
 
 
+def _get_indices(
+    signal_length: int,
+    sampling_rate: int,
+    start: int | float,
+    duration: int | float,
+) -> tuple[int, int]:
+    num_samples = duration * sampling_rate
+    # quirky round up because n % 1 > 0 iff n has a decimal part
+    num_samples = min(int(num_samples) + bool(num_samples % 1), signal_length)
+
+    start_idx = (
+        random.randint(0, signal_length - num_samples)
+        if start is None else int(start * sampling_rate)
+    )
+    return start_idx, min(start_idx + num_samples - 1, signal_length - 1)
+
+
 def crop_signal(
     signal: ArrayLike,
     sampling_rate: int,
@@ -27,27 +44,27 @@ def crop_signal(
     all samples starting at start_idx and ending at
     :math:`\text{start_idx} + \text{n_samples} - 1`.
 
-    :param ArrayLike signal: The signal to crop.
+    :param ArrayLike signal: The signal to crop. The signal can have any arbitrary dimension.
+        However, the last dimension must be the temporal dimension (i.e the samples are indexed
+        in this dimension).
     :param int sampling_rate: The sampling rate of the given signal.
     :param int or float duration: The duration (seconds) of the cropped signal.
     :param int, float or None: Where (in seconds) to start the cropping. If `start=None`,
     a random starting index will be chosen.
     """
-    if not len(signal):
+    signal_len = signal.shape[0 if len(signal.shape) == 1 else -1]
+    if not signal_len:
         return signal[:0]
 
-    num_samples = duration * sampling_rate
-    # quirky round up because n % 1 > 0 iff n has a decimal part
-    num_samples = min(int(num_samples) + bool(num_samples % 1), len(signal))
-
-    start_idx = (
-        random.randint(0, len(signal) - num_samples)
-        if start is None else int(start * sampling_rate)
+    start_idx, end_idx = _get_indices(
+        signal_len, sampling_rate,
+        0 if start is None else start,
+        duration
     )
-    end_idx = min(start_idx + num_samples - 1, len(signal) - 1)
-
-    return (
-        signal[start_idx:(end_idx + 1)]
-        if (start_idx < end_idx and start_idx < len(signal))
-        else signal[:0]  # return nothing
+    index_slicer = (
+        slice(start_idx, end_idx + 1, 1)
+        if (start_idx < end_idx and start_idx < signal_len)
+        else slice(0)  # return nothing
     )
+
+    return signal[..., index_slicer]

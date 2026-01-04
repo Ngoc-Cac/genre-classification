@@ -2,9 +2,10 @@
 numpy>=2.3.4
 pandas>=2.3.3
 matplotlib>=3.10.8
+scikit-learn>=1.8
 
-# loading wav and mp3 files into numpy arrays
-librosa>=0.11
+# loading wav and mp3 files into torch.Tensor
+torchcodec>=0.9.1
 
 # parsing stuff
 pyyaml>=6.0.3

@@ -53,13 +53,10 @@ def _validate_data_args(data_args: dict):
             "a positive integer."
         )
 
-    if (data_args['type'] == 'fma'):
-        if (
-            not isinstance(data_args['subset_ratio'], float) and
-            data_args['subset_ratio'] is not None
-        ):
+    if data_args['type'] == 'fma' and data_args['subset_ratio'] is not None:
+        if not isinstance(data_args['subset_ratio'], float):
             raise TypeError("subset_ratio should be a float between 0 and 1.")
-        elif not 0 <= data_args['subset_ratio'] <= 1:
+        elif not 0 < data_args['subset_ratio'] < 1:
             raise ValueError(
                 "Found invalid value for subset ratio! Please specify as a "
                 "number between 0 and 1."
@@ -111,6 +108,12 @@ def _validate_feat_args(feat_args):
 
     if feat_args['window_type'] not in WINDOW_FUNCTIONS:
         raise ValueError(f"window_type should be one of : {list(WINDOW_FUNCTIONS.keys())}")
+
+    if not isinstance(feat_args['freq_as_channel'], bool):
+        raise TypeError(
+            "freq_as_channel should be a bool! "
+            "Please specify as either true or false."
+        )
 
 def _validate_inout_args(inout: dict):
     if not os.path.exists(inout['ckpt_dir']):

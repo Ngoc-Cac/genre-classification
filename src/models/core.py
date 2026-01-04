@@ -10,12 +10,18 @@ class GenreClassifier(nn.Module):
         input_channel: int,
         num_genres: int,
         model_conf: str,
+        *,
+        freq_as_channel: bool = False
     ):
         super().__init__()
-        backbone, head = parse_model(model_conf, input_channel, num_genres)
+        backbone, head = parse_model(
+            model_conf, input_channel, num_genres, freq_as_channel
+        )
+
+        adapt_pool = nn.AdaptiveAvgPool1d if freq_as_channel else nn.AdaptiveAvgPool2d
         self.networks = nn.ModuleDict({
             "backbone": backbone,
-            "global_avg_pooling": nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten()),
+            "global_avg_pooling": nn.Sequential(adapt_pool(1), nn.Flatten()),
             "classification_head": head
         })
 

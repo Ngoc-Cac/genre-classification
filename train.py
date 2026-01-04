@@ -5,7 +5,10 @@ import argparse, datetime, textwrap
 
 import matplotlib.pyplot as plt, torch, tqdm
 
-from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.metrics import (
+    classification_report,
+    ConfusionMatrixDisplay
+)
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
@@ -52,7 +55,7 @@ def draw_cm(
     cmp = ConfusionMatrixDisplay.from_predictions(
         labels, preds, ax=ax,
         xticks_rotation=45, colorbar=False,
-        display_labels=test_set.dataset.id_to_genre.values()
+        display_labels=test_set.dataset.id_to_genre
     )
     cax = fig.add_axes([
         ax.get_position().x1 + cbar_offset[0], ax.get_position().y0,
@@ -70,6 +73,22 @@ def log_train_step(step, loss):
     tb_logger.add_scalar('step/train_loss', loss, step)
 
 
+now = datetime.datetime.now()
+timestamp = (
+    f"{(now.year % 100):0>2}{now.month:0>2}{now.day:0>2}-"
+    f"{now.hour:0>2}{now.minute:0>2}{now.second:0>2}"
+)
+py_logger = setup_logger(__name__, f'logs/{timestamp}.log', to_stdout=True)
+
+# set up except hook to handle any exceptions while running the event loop
+def except_hook(exc_type, exc_value, exc_tb):
+    py_logger.critical(
+        'Program exited due to exception:',
+        exc_info=(exc_type, exc_value, exc_tb)
+    )
+    sys.exit(1)
+sys.excepthook = except_hook
+
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description=textwrap.dedent("""\
@@ -79,12 +98,6 @@ parser = argparse.ArgumentParser(
            configuration file and run training accordingly.
     """)
 )
-now = datetime.datetime.now()
-timestamp = (
-    f"{(now.year % 100):0>2}{now.month:0>2}{now.day:0>2}-"
-    f"{now.hour:0>2}{now.minute:0>2}{now.second:0>2}"
-)
-py_logger = setup_logger(__name__, f'logs/{timestamp}.log', to_stdout=True)
 
 args = parse_args(parser)
 py_logger.info(f"Parsing training configuration from {args.config_file}...")
@@ -104,14 +117,16 @@ train_loader, test_loader = DataLoader(
     test_set, batch_size,
     num_workers=args.num_workers, persistent_workers=bool(args.num_workers)
 )
+id_to_genre = train_set.dataset.id_to_genre
 
 # build model
 py_logger.info("Preparing the model...")
 model, optimizer, lr_scheduler = build_model(
-    train_set.dataset.num_genres,
+    len(id_to_genre), configs['feature_args'],
     configs['inout']['model_path'],
     configs['optimizer'],
     configs['lr_schedulers'],
+    freq_as_channel=configs['feature_args']['freq_as_channel'],
     device=device,
     distirbuted_training=configs['training_args']['distributed_training']
 )
@@ -159,15 +174,13 @@ pbar = tqdm.tqdm(
     postfix=postfix_dict, desc='Epoch'
 )
 for epoch in pbar:
-    model.train()
     train_loss, train_acc = train_loop(
         model, train_loader, loss_fn,
         optimizer, gradient_scaler, device,
         mixed_precision=mixed_prec,
         callback_fn=log_train_step
     )
-    model.eval()
-    test_loss, test_acc, (labels, preds) = eval_loop(
+    test_loss, test_acc, tru_pred = eval_loop(
         model, test_loader, loss_fn, device=device,
         mixed_precision=mixed_prec, return_preds=True
     )
@@ -186,7 +199,13 @@ for epoch in pbar:
         'epoch/accuracy', {'train': train_acc, 'test': test_acc}, epoch
     )
     tb_logger.add_figure(
-        'epoch/confusion_mat', draw_cm(labels, preds), epoch
+        'epoch/confusion_mat', draw_cm(*tru_pred), epoch
+    )
+    tb_logger.add_text(
+        'epoch/report',
+        classification_report(
+            *tru_pred, target_names=id_to_genre, zero_division=0.0
+        )
     )
     tb_logger.flush()
 
@@ -203,6 +222,10 @@ tb_logger.add_hparams(
 )
 
 tb_logger.close()
+
+if distributed:
+    # unwrap the model if distributed before checkpointing
+    model = model.module
 torch.save(
     {
         'epoch': epoch,

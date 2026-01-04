@@ -8,6 +8,12 @@ ACT_FN = {
 }
 
 POOLING_TYPES = {
-    'max': nn.MaxPool2d,
-    'average': nn.AvgPool2d
+    'max': {
+        1: nn.MaxPool1d,
+        2: nn.MaxPool2d
+    },
+    'average': {
+        1: nn.AvgPool1d,
+        2: nn.AvgPool2d
+    }
 }

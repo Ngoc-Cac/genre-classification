@@ -20,6 +20,7 @@ feature_args:
   n_mfcc: 20
   n_fft: 2048
   window_type: hann
+  freq_as_channel: false
 
 training_args:
   distributed_training: false
@@ -83,6 +84,7 @@ lr_schedulers:
 #     is 'mfcc'
 #   n_fft: The number of samples to perform FFT in STFT
 #   window_type: The type of window used in STFT. Currently, only hann is available
+#   freq_as_channel: Whether to treat the frequency axis as the channel dimension for convolutions.
 # training_args:
 #   epochs: Total number of training epochs
 #   batch_size: self-explanatory

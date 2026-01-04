@@ -19,6 +19,8 @@ def train_loop(
     if callback_fn is None:
         callback_fn = lambda *args: None
     train_loss, train_acc = 0, 0
+
+    model.train()
     for step, (data, labels) in enumerate(dataloader):
         labels = labels.to(device)
         with torch.autocast(
@@ -54,6 +56,7 @@ def eval_loop(
     test_loss = 0
     all_preds, all_labels = [], []
 
+    model.eval()
     for data, labels in dataloader:
         labels = labels.to(device)
         with torch.autocast(
