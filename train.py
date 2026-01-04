@@ -122,7 +122,7 @@ id_to_genre = train_set.dataset.id_to_genre
 # build model
 py_logger.info("Preparing the model...")
 model, optimizer, lr_scheduler = build_model(
-    len(id_to_genre),
+    len(id_to_genre), configs['feature_args'],
     configs['inout']['model_path'],
     configs['optimizer'],
     configs['lr_schedulers'],

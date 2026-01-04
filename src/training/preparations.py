@@ -67,6 +67,7 @@ def build_dataset(data_args: dict, feat_args: dict) -> tuple[Subset, Subset]:
 
 def build_model(
     num_labels: int,
+    feature_args: dict,
     model_config_file: str,
     optimizer_args: dict,
     lr_scheduler_configs: dict,
@@ -75,8 +76,16 @@ def build_model(
     device: Literal['cuda', 'cpu'] = 'cpu',
     distirbuted_training: bool = False
 ) -> tuple[GenreClassifier, torch.optim.Optimizer, torch.optim.lr_scheduler.LRScheduler]:
+    in_channels = (
+        1 if not freq_as_channel else
+        12 if feature_args['feature_type'] == 'chroma' else
+        128 if feature_args['feature_type'] == 'midi' else
+        feature_args['n_mels'] if feature_args['feature_type'] == 'mel' else
+        feature_args['n_mfcc'] 
+    )
+
     model = GenreClassifier(
-        1, num_labels, model_config_file,
+        in_channels, num_labels, model_config_file,
         freq_as_channel=freq_as_channel
     ).to(device)
 
